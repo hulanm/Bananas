@@ -50,9 +50,7 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // Score and Camera tracking variables
         let score = 0, startTime = Date.now(), isDead = false, difficulty = 1, lastSpawn = 0;
-        let cameraY = 0;
 
         const player = {
             x: canvas.width / 2, y: canvas.height - 150,
@@ -108,9 +106,6 @@
             player.vy += gravity; player.x += player.vx; player.y += player.vy;
             player.grounded = false;
 
-            // Camera Tracking Logic: Centers view on player
-            cameraY = player.y - canvas.height / 2;
-
             platforms.forEach(plat => {
                 if (player.x < plat.x + plat.w && player.x + player.w > plat.x &&
                     player.y + player.h > plat.y && player.y + player.h < plat.y + plat.h + player.vy) {
@@ -149,9 +144,6 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            ctx.save(); // Save the normal view state
-            ctx.translate(0, -cameraY); // Shift the world based on character height
-
             // Draw Platforms
             ctx.fillStyle = '#2c3e50';
             platforms.forEach(plat => { ctx.beginPath(); ctx.roundRect(plat.x, plat.y, plat.w, plat.h, 5); ctx.fill(); });
@@ -173,8 +165,6 @@
             // Draw Projectiles
             ctx.fillStyle = '#e74c3c';
             projectiles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); });
-
-            ctx.restore(); // Restore view so the UI (Score/Time) stays locked in place
         }
         requestAnimationFrame(update);
     </script>
