@@ -1,4 +1,52 @@
 <!DOCTYPE html>
+// 1. Add this variable near your score/difficulty settings
+let cameraY = 0;
+
+// 2. Update your existing update() function to include camera tracking
+function update(time) {
+    if (isDead) return;
+
+    // ... your existing movement and collision code ...
+
+    // ADD THIS LINE: It centers the camera on the player's vertical position
+    cameraY = player.y - canvas.height / 2;
+
+    draw();
+    requestAnimationFrame(update);
+}
+
+// 3. Update your draw() function to apply the camera shift
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    // This moves the whole world based on the player's height
+    ctx.translate(0, -cameraY);
+
+    // Draw Platforms
+    ctx.fillStyle = '#2c3e50';
+    platforms.forEach(plat => {
+        ctx.beginPath();
+        ctx.roundRect(plat.x, plat.y, plat.w, plat.h, 5);
+        ctx.fill();
+    });
+
+    // Draw Stickman
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    const px = player.x + player.w / 2;
+    const py = player.y;
+    ctx.beginPath(); ctx.arc(px, py + 10, 8, 0, Math.PI * 2); ctx.stroke(); // Head
+    ctx.beginPath(); ctx.moveTo(px, py + 18); ctx.lineTo(px, py + 38); ctx.stroke(); // Body
+    ctx.beginPath(); ctx.moveTo(px - 12, py + 25); ctx.lineTo(px + 12, py + 25); ctx.stroke(); // Arms
+    ctx.beginPath(); ctx.moveTo(px, py + 38); ctx.lineTo(px - 10, py + 50); ctx.stroke(); // Legs
+    ctx.beginPath(); ctx.moveTo(px, py + 38); ctx.lineTo(px + 10, py + 50); ctx.stroke();
+
+    // Draw Coin and Projectiles
+    // ... your existing coin and projectile drawing code ...
+
+    ctx.restore(); // Restores the screen so UI elements don't move
+}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
