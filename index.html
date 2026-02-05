@@ -29,7 +29,18 @@
             margin: 0;
         }
 
-        /* The white box for the game */
+        h2 {
+            margin-top: 40px;
+            color: #333;
+        }
+
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 50px;
+        }
+
         .game-container {
             background: white;
             padding: 15px;
@@ -47,9 +58,8 @@
             background: #fff;
         }
 
-        /* Controls outside the box */
         .external-controls {
-            margin-top: 30px;
+            margin-top: 20px;
         }
 
         .btn {
@@ -87,12 +97,24 @@
         <h1>Chaotic Pigeon Presents...</h1>
     </header>
 
-    <div class="game-container">
-        <iframe src="/bouncyball/index.html"></iframe>
+    <div class="game-wrapper">
+        <h2>Bouncy Ball</h2>
+        <div class="game-container">
+            <iframe src="/bouncyball/index.html"></iframe>
+        </div>
+        <div class="external-controls">
+            <a href="/bouncyball/index.html" target="_blank" class="btn">Open Bouncy Ball in New Tab ↗</a>
+        </div>
     </div>
 
-    <div class="external-controls">
-        <a href="/bouncyball/index.html" target="_blank" class="btn">Open Game in New Tab ↗</a>
+    <div class="game-wrapper">
+        <h2>Stickman Adventure</h2>
+        <div class="game-container">
+            <iframe src="/stickman"></iframe>
+        </div>
+        <div class="external-controls">
+            <a href="/stickman" target="_blank" class="btn">Open Stickman in New Tab ↗</a>
+        </div>
     </div>
 
     <div class="footer">
