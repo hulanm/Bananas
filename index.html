@@ -3,123 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chaotic Pigeon Presents</title>
+    <title>Stickman Adventure</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
+        body { margin: 0; overflow: hidden; background: #e0e4e8; font-family: 'Segoe UI', sans-serif; }
+        canvas { display: block; background: linear-gradient(to bottom, #87CEEB 0%, #f0f2f5 100%); }
+        #ui { 
+            position: absolute; top: 20px; left: 20px; font-size: 24px; font-weight: 900; 
+            color: #2c3e50; pointer-events: none; line-height: 1.4;
         }
-
-        header {
-            margin-top: 50px;
-            margin-bottom: 20px;
-            text-align: center;
+        #game-over {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 40px; border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: center; display: none; 
         }
-
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: #1a1a1a;
-            margin: 0;
+        .retry-btn {
+            background: #2c3e50; color: white; border: none; padding: 12px 24px;
+            border-radius: 30px; font-size: 1rem; font-weight: bold; cursor: pointer; 
+            margin-top: 20px; transition: background 0.2s;
         }
-
-        h2 {
-            margin-top: 40px;
-            color: #333;
-        }
-
-        .game-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 50px;
-        }
-
-        .game-container {
-            background: white;
-            padding: 15px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: 4px solid #fff;
-        }
-
-        iframe {
-            width: 600px;
-            height: 400px;
-            border: none;
-            border-radius: 10px;
-            display: block;
-            background: #fff;
-        }
-
-        .external-controls {
-            margin-top: 20px;
-        }
-
-        .btn {
-            text-decoration: none;
-            background: #1a1a1a;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            transition: transform 0.2s;
-        }
-
-        .btn:hover {
-            transform: scale(1.05);
-        }
-
-        .footer {
-            margin-top: auto;
-            padding: 40px;
-            color: #666;
-        }
-
-        @media (max-width: 650px) {
-            iframe {
-                width: 90vw;
-                height: 60vw;
-            }
-        }
+        .retry-btn:hover { background: #34495e; }
     </style>
 </head>
 <body>
-
-    <header>
-        <h1>Chaotic Pigeon Presents...</h1>
-    </header>
-
-    <div class="game-wrapper">
-        <h2>Bouncy Ball</h2>
-        <div class="game-container">
-            <iframe src="/bouncyball/index.html"></iframe>
-        </div>
-        <div class="external-controls">
-            <a href="/bouncyball/index.html" target="_blank" class="btn">Open Bouncy Ball in New Tab ↗</a>
-        </div>
+    <div id="ui">Score: 0<br>Time: 0s</div>
+    
+    <div id="game-over">
+        <h2>MISSION FAILED</h2>
+        <p id="finalStats"></p>
+        <button class="retry-btn" onclick="window.location.href = window.location.href;">Try Again</button>
     </div>
 
-    <div class="game-wrapper">
-        <h2>Stickman Adventure</h2>
-        <div class="game-container">
-            <iframe src="/stickman"></iframe>
-        </div>
-        <div class="external-controls">
-            <a href="/stickman" target="_blank" class="btn">Open Stickman in New Tab ↗</a>
-        </div>
-    </div>
+    <audio id="bgMusic" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
 
-    <div class="footer">
-        <p>Built by Elliott</p>
-    </div>
+    <canvas id="gameCanvas"></canvas>
 
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ui = document.getElementById('ui');
+        const music = document.getElementById('bgMusic');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalStatsText = document.getElementById('finalStats');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0, startTime = Date.now(), isDead = false, difficulty = 1, lastSpawn = 0;
+
+        const player = {
+            x: canvas.width / 2, y: canvas.height - 150,
+            w: 20, h: 50, vx: 0, vy: 0, speed: 6, jumpPower: -15, grounded: false
+        };
+
+        const gravity = 0.7, keys = {}, projectiles = [];
+        
+        // 3-2-3 Platform Grid
+        const platforms = [
+            { x: 0, y: canvas.height - 40, w: canvas.width, h: 40 }, 
+            { x: canvas.width * 0.1, y: canvas.height - 180, w: 140, h: 20 },
+            { x: canvas.width * 0.45, y: canvas.height - 180, w: 100, h: 20 },
+            { x: canvas.width * 0.8, y: canvas.height - 180, w: 140, h: 20 },
+            { x: canvas.width * 0.25, y: canvas.height - 320, w: 180, h: 20 },
+            { x: canvas.width * 0.65, y: canvas.height - 320, w: 180, h: 20 },
+            { x: canvas.width * 0.05, y: canvas.height - 460, w: 120, h: 20 },
+            { x: canvas.width * 0.42, y: canvas.height - 460, w: 200, h: 20 },
+            { x: canvas.width * 0.85, y: canvas.height - 460, w: 100, h: 20 }
+        ];
+
+        let coin = { x: canvas.width / 2, y: canvas.height - 250, r: 12 };
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (music.paused && !isDead) music.play();
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function spawnProjectile() {
+            const side = Math.random() > 0.5 ? 'left' : 'right';
+            projectiles.push({
+                x: side === 'left' ? -30 : canvas.width + 30,
+                y: Math.random() * (canvas.height - 100),
+                vx: (side === 'left' ? 1 : -1) * (2 + (difficulty * 1.2)),
+                size: 18 
+            });
+        }
+
+        function update(time) {
+            if (isDead) return;
+            const survivalTime = Math.floor((Date.now() - startTime) / 1000);
+            ui.innerHTML = `Score: ${score}<br>Time: ${survivalTime}s`;
+
+            if (keys['ArrowLeft']) player.vx = -player.speed;
+            else if (keys['ArrowRight']) player.vx = player.speed;
+            else player.vx = 0;
+
+            if (keys['ArrowUp'] && player.grounded) {
+                player.vy = player.jumpPower;
+                player.grounded = false;
+            }
+
+            player.vy += gravity; player.x += player.vx; player.y += player.vy;
+            player.grounded = false;
+            platforms.forEach(plat => {
+                if (player.x < plat.x + plat.w && player.x + player.w > plat.x &&
+                    player.y + player.h > plat.y && player.y + player.h < plat.y + plat.h + player.vy) {
+                    player.y = plat.y - player.h; player.vy = 0; player.grounded = true;
+                }
+            });
+
+            if (player.y > canvas.height) endGame(survivalTime);
+
+            const dist = Math.hypot((player.x + player.w/2) - coin.x, (player.y + player.h/2) - coin.y);
+            if (dist < 35) {
+                score++; difficulty += 0.15;
+                const targetPlat = platforms[Math.floor(Math.random() * (platforms.length - 1)) + 1];
+                coin.x = targetPlat.x + Math.random() * targetPlat.w; coin.y = targetPlat.y - 40;
+            }
+
+            if (time - lastSpawn > 3000 / difficulty) { spawnProjectile(); lastSpawn = time; }
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i]; p.x += p.vx;
+                const pDist = Math.hypot((player.x + player.w/2) - p.x, (player.y + player.h/2) - p.y);
+                if (pDist < p.size + 10) endGame(survivalTime);
+                if (p.x < -100 || p.x > canvas.width + 100) projectiles.splice(i, 1);
+            }
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function endGame(s) {
+            isDead = true; music.pause();
+            finalStatsText.innerHTML = `Score: ${score} | Survived: ${s}s`;
+            gameOverScreen.style.display = 'block';
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#2c3e50';
+            platforms.forEach(plat => { ctx.beginPath(); ctx.roundRect(plat.x, plat.y, plat.w, plat.h, 5); ctx.fill(); });
+
+            // Stickman Drawing
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+            const px = player.x + player.w/2; const py = player.y;
+            ctx.beginPath(); ctx.arc(px, py + 10, 8, 0, Math.PI*2); ctx.stroke(); // Head
+            ctx.beginPath(); ctx.moveTo(px, py + 18); ctx.lineTo(px, py + 38); ctx.stroke(); // Body
+            ctx.beginPath(); ctx.moveTo(px - 12, py + 25); ctx.lineTo(px + 12, py + 25); ctx.stroke(); // Arms
+            ctx.beginPath(); ctx.moveTo(px, py + 38); ctx.lineTo(px - 10, py + 50); ctx.stroke(); // Legs
+            ctx.beginPath(); ctx.moveTo(px, py + 38); ctx.lineTo(px + 10, py + 50); ctx.stroke();
+
+            // Gold Coin
+            ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(coin.x, coin.y, coin.r, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#d4ac0d'; ctx.stroke();
+            ctx.fillStyle = '#d4ac0d'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText('$', coin.x, coin.y + 5);
+
+            // Projectiles
+            ctx.fillStyle = '#e74c3c';
+            projectiles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); });
+        }
+        requestAnimationFrame(update);
+    </script>
 </body>
 </html>
