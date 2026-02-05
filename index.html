@@ -1,142 +1,192 @@
-
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <title>Bouncy Balls</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bouncy Ball Vacuum</title>
     <style>
-      body { margin: 0; overflow: hidden; background-color: #f0f0f0; }
-      .ball {
-        position: absolute;
-        border-radius: 50%;
-        cursor: grab;
-      }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            width: 100vw;
+            height: 100vh;
+            user-select: none;
+            font-family: Arial, sans-serif;
+        }
+        #counter {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .ball {
+            position: absolute;
+            border-radius: 50%;
+            cursor: grab;
+            touch-action: none;
+        }
+        /* Vacuum cursor style */
+        body.vacuum-mode {
+            cursor: crosshair;
+        }
+        body.vacuum-mode .ball {
+            cursor: crosshair;
+        }
     </style>
-    </head>
-    <body>
-    
-    <script>
-      const balls = [];
-      let draggedBall = null;
-      let dragOffsetX, dragOffsetY;
-      let lastMouseX, lastMouseY, lastMouseTime;
-      const gravity = 0.5;
-      const friction = 0.98;
-      const minVelocity = 0.1;
-    
-      document.addEventListener('mousedown', (e) => {
-        let clickedOnBall = false;
-        balls.forEach(ball => {
-          const dx = e.clientX - (ball.x + ball.radius);
-          const dy = e.clientY - (ball.y + ball.radius);
-          if (dx * dx + dy * dy < ball.radius * ball.radius) {
-            draggedBall = ball;
-            dragOffsetX = e.clientX - ball.x;
-            dragOffsetY = e.clientY - ball.y;
-            ball.vx = 0;
-            ball.vy = 0;
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-            lastMouseTime = Date.now();
-            clickedOnBall = true;
-            draggedBall.element.style.cursor = 'grabbing';
-          }
-        });
-    
-        if (!clickedOnBall) {
-          createBall(e.clientX, e.clientY);
-        }
-      });
-    
-      document.addEventListener('mousemove', (e) => {
-        if (draggedBall) {
-          draggedBall.x = e.clientX - dragOffsetX;
-          draggedBall.y = e.clientY - dragOffsetY;
-          const now = Date.now();
-          const dt = (now - lastMouseTime) || 1; // prevent division by zero
-          draggedBall.vx = (e.clientX - lastMouseX) / dt * 5; // Amplify velocity
-          draggedBall.vy = (e.clientY - lastMouseY) / dt * 5;
-          lastMouseX = e.clientX;
-          lastMouseY = e.clientY;
-          lastMouseTime = now;
-          
-          // Keep ball within bounds during drag
-          if (draggedBall.x < 0) draggedBall.x = 0;
-          if (draggedBall.x + 2 * draggedBall.radius > window.innerWidth) draggedBall.x = window.innerWidth - 2 * draggedBall.radius;
-          if (draggedBall.y < 0) draggedBall.y = 0;
-          if (draggedBall.y + 2 * draggedBall.radius > window.innerHeight) draggedBall.y = window.innerHeight - 2 * draggedBall.radius;
-    
-          draggedBall.element.style.left = draggedBall.x + 'px';
-          draggedBall.element.style.top = draggedBall.y + 'px';
-        }
-      });
-    
-      document.addEventListener('mouseup', (e) => {
-        if (draggedBall) {
-          draggedBall.element.style.cursor = 'grab';
-          draggedBall = null;
-        }
-      });
-    
-      function createBall(x, y) {
-        const radius = Math.random() * 20 + 10; // 10 to 30
-        const color = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
-        const ball = {
-          x: x - radius,
-          y: y - radius,
-          vx: Math.random() * 10 - 5,
-          vy: Math.random() * 10 - 5,
-          radius: radius,
-          color: color,
-          element: document.createElement('div')
-        };
-    
-        ball.element.classList.add('ball');
-        ball.element.style.left = ball.x + 'px';
-        ball.element.style.top = ball.y + 'px';
-        ball.element.style.width = ball.radius * 2 + 'px';
-        ball.element.style.height = ball.radius * 2 + 'px';
-        ball.element.style.backgroundColor = ball.color;
-    
-        document.body.appendChild(ball.element);
-        balls.push(ball);
-      }
-    
-      function update() {
-        balls.forEach(ball => {
-          if (ball === draggedBall) return;
-    
-          ball.vy += gravity;
-          ball.x += ball.vx;
-          ball.y += ball.vy;
-    
-          // Wall collisions
-          if (ball.x + ball.radius * 2 > window.innerWidth || ball.x < 0) {
-            ball.vx *= -friction;
-            if (ball.x < 0) ball.x = 0;
-            if (ball.x + ball.radius * 2 > window.innerWidth) ball.x = window.innerWidth - ball.radius * 2;
-            if (Math.abs(ball.vx) < minVelocity) ball.vx = 0;
-          }
-          if (ball.y + ball.radius * 2 > window.innerHeight || ball.y < 0) {
-            ball.vy *= -friction;
-            if (ball.y < 0) ball.y = 0;
-            if (ball.y + ball.radius * 2 > window.innerHeight) ball.y = window.innerHeight - ball.radius * 2;
-            if (Math.abs(ball.vy) < minVelocity) ball.vy = 0;
+</head>
+<body id="game-body">
+
+<div id="counter">Clicks: 0</div>
+
+<script>
+    const counterElement = document.getElementById('counter');
+    const body = document.getElementById('game-body');
+    let clickCount = 0;
+    let isVacuumMode = false;
+
+    const gravity = 0.5;
+    const friction = 0.98;
+    const wallBounciness = 0.8;
+    const balls = [];
+    let mouseX = 0;
+    let mouseY = 0;
+
+    class Ball {
+        constructor(x, y) {
+            this.radius = Math.random() * 15 + 10;
+            this.x = x - this.radius;
+            this.y = y - this.radius;
+            this.vx = (Math.random() - 0.5) * 15;
+            this.vy = (Math.random() - 0.5) * 15;
+            this.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+            this.isDragging = false;
+            this.toDelete = false;
             
-            // Apply friction to vx when hitting floor/ceiling
-             ball.vx *= friction;
-             if (Math.abs(ball.vx) < minVelocity) ball.vx = 0;
-          }
-    
-          ball.element.style.left = ball.x + 'px';
-          ball.element.style.top = ball.y + 'px';
+            this.element = document.createElement('div');
+            this.element.className = 'ball';
+            this.element.style.width = this.radius * 2 + 'px';
+            this.element.style.height = this.radius * 2 + 'px';
+            this.element.style.backgroundColor = this.color;
+            document.body.appendChild(this.element);
+
+            this.element.addEventListener('mousedown', (e) => {
+                if (!isVacuumMode) {
+                    this.isDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    e.stopPropagation();
+                }
+            });
+        }
+
+        update() {
+            if (this.toDelete) return;
+
+            if (isVacuumMode) {
+                // Vacuum Logic: Pull towards mouse
+                const dx = mouseX - (this.x + this.radius);
+                const dy = mouseY - (this.y + this.radius);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 30) {
+                    // "Suck up" the ball
+                    this.toDelete = true;
+                    this.element.remove();
+                    return;
+                }
+
+                // Strength of the pull
+                const force = 0.8;
+                this.vx += (dx / distance) * force;
+                this.vy += (dy / distance) * force;
+            }
+
+            if (this.isDragging) return;
+
+            this.vy += gravity;
+            this.vx *= friction;
+            this.vy *= friction;
+
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Wall Collisions
+            if (this.x + this.radius * 2 > window.innerWidth) {
+                this.x = window.innerWidth - this.radius * 2;
+                this.vx *= -wallBounciness;
+            } else if (this.x < 0) {
+                this.x = 0;
+                this.vx *= -wallBounciness;
+            }
+
+            if (this.y + this.radius * 2 > window.innerHeight) {
+                this.y = window.innerHeight - this.radius * 2;
+                this.vy *= -wallBounciness;
+            } else if (this.y < 0) {
+                this.y = 0;
+                this.vy *= -wallBounciness;
+            }
+
+            this.draw();
+        }
+
+        draw() {
+            this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+        }
+    }
+
+    window.addEventListener('mousedown', (e) => {
+        clickCount++;
+        counterElement.innerText = `Clicks: ${clickCount}`;
+
+        if (clickCount >= 100 && !isVacuumMode) {
+            isVacuumMode = true;
+            body.classList.add('vacuum-mode');
+            counterElement.innerText = "VACUUM MODE ACTIVE!";
+            counterElement.style.color = "#ff4757";
+        }
+
+        if (!isVacuumMode) {
+            const ball = new Ball(e.clientX, e.clientY);
+            balls.push(ball);
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+
+        balls.forEach(ball => {
+            if (ball.isDragging) {
+                ball.vx = e.clientX - ball.lastMouseX;
+                ball.vy = e.clientY - ball.lastMouseY;
+                ball.x = e.clientX - ball.radius;
+                ball.y = e.clientY - ball.radius;
+                ball.lastMouseX = e.clientX;
+                ball.lastMouseY = e.clientY;
+                ball.draw();
+            }
         });
-    
-        requestAnimationFrame(update);
-      }
-    
-      update();
-    
-    </script>
-    </body>
-    </html>
-    
+    });
+
+    window.addEventListener('mouseup', () => {
+        balls.forEach(ball => ball.isDragging = false);
+    });
+
+    function animate() {
+        for (let i = balls.length - 1; i >= 0; i--) {
+            balls[i].update();
+            if (balls[i].toDelete) {
+                balls.splice(i, 1);
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+</script>
+</body>
+</html>
