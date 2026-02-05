@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bouncy Ball Vacuum</title>
+    <title>Plinko Vacuum</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: #1a1a1a;
+            background: #ffffff; /* White background */
             width: 100vw;
             height: 100vh;
             user-select: none;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         #counter {
             position: fixed;
             top: 20px;
             left: 20px;
-            color: white;
+            color: #333;
             font-size: 24px;
+            font-weight: bold;
             pointer-events: none;
             z-index: 100;
         }
@@ -28,12 +29,9 @@
             border-radius: 50%;
             cursor: grab;
             touch-action: none;
+            box-shadow: inset -2px -2px 6px rgba(0,0,0,0.2);
         }
-        /* Vacuum cursor style */
         body.vacuum-mode {
-            cursor: crosshair;
-        }
-        body.vacuum-mode .ball {
             cursor: crosshair;
         }
     </style>
@@ -43,26 +41,46 @@
 <div id="counter">Clicks: 0</div>
 
 <script>
+    // Audio Context for the "Plinko" sound
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playPlinkoSound(volume = 0.1) {
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'sine';
+        // Randomized high pitch for that "tink" sound
+        oscillator.frequency.setValueAtTime(800 + Math.random() * 400, audioCtx.currentTime);
+        
+        gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+
     const counterElement = document.getElementById('counter');
     const body = document.getElementById('game-body');
     let clickCount = 0;
     let isVacuumMode = false;
 
-    const gravity = 0.5;
-    const friction = 0.98;
-    const wallBounciness = 0.8;
-    const balls = [];
+    const gravity = 0.6;
+    const friction = 0.99; // Less friction for more "plinko" bounciness
+    const wallBounciness = 0.9; // Higher bounciness
+    let balls = [];
     let mouseX = 0;
     let mouseY = 0;
 
     class Ball {
         constructor(x, y) {
-            this.radius = Math.random() * 15 + 10;
+            this.radius = 12;
             this.x = x - this.radius;
             this.y = y - this.radius;
-            this.vx = (Math.random() - 0.5) * 15;
-            this.vy = (Math.random() - 0.5) * 15;
-            this.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+            this.vx = (Math.random() - 0.5) * 10;
+            this.vy = (Math.random() - 0.5) * 10;
+            this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
             this.isDragging = false;
             this.toDelete = false;
             
@@ -87,20 +105,18 @@
             if (this.toDelete) return;
 
             if (isVacuumMode) {
-                // Vacuum Logic: Pull towards mouse
                 const dx = mouseX - (this.x + this.radius);
                 const dy = mouseY - (this.y + this.radius);
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance < 30) {
-                    // "Suck up" the ball
+                if (distance < 25) {
                     this.toDelete = true;
                     this.element.remove();
+                    checkReset(); // Check if we should reset after every suck
                     return;
                 }
 
-                // Strength of the pull
-                const force = 0.8;
+                const force = 1.2; 
                 this.vx += (dx / distance) * force;
                 this.vy += (dy / distance) * force;
             }
@@ -114,21 +130,30 @@
             this.x += this.vx;
             this.y += this.vy;
 
-            // Wall Collisions
+            // Boundary collisions with sound
+            let hitWall = false;
             if (this.x + this.radius * 2 > window.innerWidth) {
                 this.x = window.innerWidth - this.radius * 2;
                 this.vx *= -wallBounciness;
+                hitWall = true;
             } else if (this.x < 0) {
                 this.x = 0;
                 this.vx *= -wallBounciness;
+                hitWall = true;
             }
 
             if (this.y + this.radius * 2 > window.innerHeight) {
                 this.y = window.innerHeight - this.radius * 2;
                 this.vy *= -wallBounciness;
+                hitWall = true;
             } else if (this.y < 0) {
                 this.y = 0;
                 this.vy *= -wallBounciness;
+                hitWall = true;
+            }
+
+            if (hitWall && Math.abs(this.vx + this.vy) > 1) {
+                playPlinkoSound();
             }
 
             this.draw();
@@ -139,20 +164,37 @@
         }
     }
 
-    window.addEventListener('mousedown', (e) => {
-        clickCount++;
-        counterElement.innerText = `Clicks: ${clickCount}`;
-
-        if (clickCount >= 100 && !isVacuumMode) {
-            isVacuumMode = true;
-            body.classList.add('vacuum-mode');
-            counterElement.innerText = "VACUUM MODE ACTIVE!";
-            counterElement.style.color = "#ff4757";
+    function checkReset() {
+        if (isVacuumMode && balls.every(b => b.toDelete)) {
+            // All balls gone! Reset everything.
+            setTimeout(() => {
+                isVacuumMode = false;
+                clickCount = 0;
+                balls = [];
+                body.classList.remove('vacuum-mode');
+                counterElement.innerText = "Clicks: 0";
+                counterElement.style.color = "#333";
+            }, 500);
         }
+    }
+
+    window.addEventListener('mousedown', (e) => {
+        // Initialize audio on first click (browsers require user gesture)
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
         if (!isVacuumMode) {
-            const ball = new Ball(e.clientX, e.clientY);
-            balls.push(ball);
+            clickCount++;
+            counterElement.innerText = `Clicks: ${clickCount}`;
+
+            if (clickCount >= 100) {
+                isVacuumMode = true;
+                body.classList.add('vacuum-mode');
+                counterElement.innerText = "VACUUM ENGAGED!";
+                counterElement.style.color = "#ff4757";
+            } else {
+                const ball = new Ball(e.clientX, e.clientY);
+                balls.push(ball);
+            }
         }
     });
 
