@@ -1,1 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bouncy Ball to Watermelon Rat</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #ffffff;
+            width: 100vw;
+            height: 100vh;
+            user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #counter {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .entity {
+            position: absolute;
+            border-radius: 50%;
+            cursor: grab;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Mode-specific cursor handling */
+        body.suction-mode {
+            cursor: none; 
+        }
+        #rat-cursor, #hole-cursor {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            transform: translate(-50%, -50%);
+        }
+        /* Rat Phase Cursor */
+        body.suction-mode.watermelon-phase #rat-cursor {
+            display: block;
+        }
+        /* Hole Cursor for Ball Phase */
+        #hole-cursor {
+            width: 60px;
+            height: 60px;
+            border: 4px dashed #333;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.1);
+        }
+        body.suction-mode.ball-phase #hole-cursor {
+            display: block;
+        }
+        #rat-cursor {
+            font-size: 50px;
+        }
+    </style>
+</head>
+<body id="game-body" class="ball-phase">
+
+<div id="counter">Clicks: 0</div>
+<div id="hole-cursor"></div>
+<div id="rat-cursor">🐀</div>
+
+<script>
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // --- SOUND EFFECTS ---
+    function playBounceSound() {
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(150 + Math.random() * 50, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function playSquishSound() {
+        const noiseNode = audioCtx.createBufferSource();
+        const bufferSize = audioCtx.sampleRate * 0.1;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        noiseNode.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        noiseNode.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        noiseNode.start();
+    }
+
+    let motorSound = null;
+    function startSuctionSound(type) {
+        if (motorSound) return;
+        const gain = audioCtx.createGain();
+        if (type === 'rat') {
+            // "Nom Nom Nom" Eating Sound
+            const osc = audioCtx.createOscillator();
+            osc.type = 'square';
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            lfo.frequency.setValueAtTime(8, audioCtx.currentTime);
+            lfoGain.gain.setValueAtTime(50, audioCtx.currentTime);
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            osc.connect(gain);
+            lfo.start();
+            osc.start();
+            motorSound = { osc1: osc, osc2: lfo, gain: gain };
+        } else {
+            // Vacuum sound
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(80, audioCtx.currentTime);
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(82, audioCtx.currentTime);
+            osc1.connect(gain);
+            osc2.connect(gain);
+            osc1.start();
+            osc2.start();
+            motorSound = { osc1, osc2, gain: gain };
+        }
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.2);
+        gain.connect(audioCtx.destination);
+    }
+
+    function stopSuctionSound() {
+        if (!motorSound) return;
+        motorSound.gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+        const { osc1, osc2 } = motorSound;
+        setTimeout(() => { try { osc1.stop(); osc2.stop(); } catch(e) {} }, 200);
+        motorSound = null;
+    }
+
+    // --- GAME LOGIC ---
+    const counterElement = document.getElementById('counter');
+    const ratElement = document.getElementById('rat-cursor');
+    const holeElement = document.getElementById('hole-cursor');
+    const body = document.getElementById('game-body');
+    let clickCount = 0;
+    let isSuctionMode = false;
+    let phase = 'ball'; 
+    const gravity = 0.6;
+    const friction = 0.99; 
+    const wallBounciness = 0.95; 
+    let entities = [];
+    let mouseX = 0, mouseY = 0, isMouseDown = false;
+
+    class Entity {
+        constructor(x, y, type) {
+            this.type = type;
+            this.radius = Math.random() * 15 + 10;
+            this.x = x - this.radius;
+            this.y = y - this.radius;
+            this.vx = (Math.random() - 0.5) * 15;
+            this.vy = (Math.random() - 0.5) * 15;
+            this.isDragging = false;
+            this.toDelete = false;
+            this.element = document.createElement('div');
+            this.element.className = 'entity';
+            this.element.style.width = this.radius * 2 + 'px';
+            this.element.style.height = this.radius * 2 + 'px';
+            if (this.type === 'watermelon') {
+                this.element.textContent = '🍉';
+                this.element.style.fontSize = (this.radius * 1.5) + 'px';
+            } else {
+                this.element.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                this.element.style.boxShadow = 'inset -2px -2px 6px rgba(0,0,0,0.2)';
+            }
+            document.body.appendChild(this.element);
+            this.element.addEventListener('mousedown', (e) => {
+                if (!isSuctionMode) {
+                    this.isDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    e.stopPropagation();
+                }
+            });
+        }
+
+        update() {
+            if (this.toDelete) return;
+            if (isSuctionMode && isMouseDown) {
+                const dx = mouseX - (this.x + this.radius);
+                const dy = mouseY - (this.y + this.radius);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 40) {
+                    this.toDelete = true;
+                    this.element.remove();
+                    checkReset(); 
+                    return;
+                }
+                const force = 1.4; 
+                this.vx += (dx / distance) * force;
+                this.vy += (dy / distance) * force;
+            }
+            if (this.isDragging) return;
+            this.vy += gravity;
+            this.vx *= friction;
+            this.vy *= friction;
+            this.x += this.vx;
+            this.y += this.vy;
+            let hit = false;
+            if (this.x + this.radius * 2 > window.innerWidth || this.x < 0) {
+                this.vx *= -wallBounciness;
+                this.x = this.x < 0 ? 0 : window.innerWidth - this.radius * 2;
+                hit = true;
+            }
+            if (this.y + this.radius * 2 > window.innerHeight || this.y < 0) {
+                this.vy *= -wallBounciness;
+                this.y = this.y < 0 ? 0 : window.innerHeight - this.radius * 2;
+                hit = true;
+            }
+            if (hit && Math.abs(this.vx + this.vy) > 1) {
+                this.type === 'watermelon' ? playSquishSound() : playBounceSound();
+            }
+            this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+        }
+    }
+
+    function checkReset() {
+        if (isSuctionMode && entities.every(e => e.toDelete)) {
+            stopSuctionSound();
+            setTimeout(() => {
+                isSuctionMode = false;
+                clickCount = 0;
+                entities = [];
+                phase = 'watermelon'; 
+                body.className = 'watermelon-phase';
+                counterElement.innerText = "Clicks: 0 (Watermelon Phase)";
+            }, 500);
+        }
+    }
+
+    window.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (isSuctionMode) {
+            startSuctionSound(phase === 'ball' ? 'vacuum' : 'rat');
+        } else {
+            clickCount++;
+            counterElement.innerText = `Clicks: ${clickCount}`;
+            if (clickCount >= 100) {
+                isSuctionMode = true;
+                body.classList.add('suction-mode');
+                counterElement.innerText = phase === 'ball' ? "VACUUM ACTIVE" : "THE RAT IS HUNGRY";
+            } else {
+                entities.push(new Entity(e.clientX, e.clientY, phase));
+            }
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        ratElement.style.left = mouseX + 'px';
+        ratElement.style.top = mouseY + 'px';
+        holeElement.style.left = mouseX + 'px';
+        holeElement.style.top = mouseY + 'px';
+        entities.forEach(entity => {
+            if (entity.isDragging) {
+                entity.vx = e.clientX - entity.lastMouseX;
+                entity.vy = e.clientY - entity.lastMouseY;
+                entity.x = e.clientX - entity.radius;
+                entity.y = e.clientY - entity.radius;
+                entity.lastMouseX = e.clientX;
+                entity.lastMouseY = e.clientY;
+                entity.element.style.transform = `translate(${entity.x}px, ${entity.y}px)`;
+            }
+        });
+    });
+
+    window.addEventListener('mouseup', () => {
+        isMouseDown = false;
+        stopSuctionSound();
+        entities.forEach(e => e.isDragging = false);
+    });
+
+    function animate() {
+        for (let i = entities.length - 1; i >= 0; i--) {
+            entities[i].update();
+            if (entities[i].toDelete) entities.splice(i, 1);
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+</script>
+</body>
+</html>
 
