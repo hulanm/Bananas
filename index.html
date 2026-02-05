@@ -1,1 +1,142 @@
 
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>Bouncy Balls</title>
+    <style>
+      body { margin: 0; overflow: hidden; background-color: #f0f0f0; }
+      .ball {
+        position: absolute;
+        border-radius: 50%;
+        cursor: grab;
+      }
+    </style>
+    </head>
+    <body>
+    
+    <script>
+      const balls = [];
+      let draggedBall = null;
+      let dragOffsetX, dragOffsetY;
+      let lastMouseX, lastMouseY, lastMouseTime;
+      const gravity = 0.5;
+      const friction = 0.98;
+      const minVelocity = 0.1;
+    
+      document.addEventListener('mousedown', (e) => {
+        let clickedOnBall = false;
+        balls.forEach(ball => {
+          const dx = e.clientX - (ball.x + ball.radius);
+          const dy = e.clientY - (ball.y + ball.radius);
+          if (dx * dx + dy * dy < ball.radius * ball.radius) {
+            draggedBall = ball;
+            dragOffsetX = e.clientX - ball.x;
+            dragOffsetY = e.clientY - ball.y;
+            ball.vx = 0;
+            ball.vy = 0;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            lastMouseTime = Date.now();
+            clickedOnBall = true;
+            draggedBall.element.style.cursor = 'grabbing';
+          }
+        });
+    
+        if (!clickedOnBall) {
+          createBall(e.clientX, e.clientY);
+        }
+      });
+    
+      document.addEventListener('mousemove', (e) => {
+        if (draggedBall) {
+          draggedBall.x = e.clientX - dragOffsetX;
+          draggedBall.y = e.clientY - dragOffsetY;
+          const now = Date.now();
+          const dt = (now - lastMouseTime) || 1; // prevent division by zero
+          draggedBall.vx = (e.clientX - lastMouseX) / dt * 5; // Amplify velocity
+          draggedBall.vy = (e.clientY - lastMouseY) / dt * 5;
+          lastMouseX = e.clientX;
+          lastMouseY = e.clientY;
+          lastMouseTime = now;
+          
+          // Keep ball within bounds during drag
+          if (draggedBall.x < 0) draggedBall.x = 0;
+          if (draggedBall.x + 2 * draggedBall.radius > window.innerWidth) draggedBall.x = window.innerWidth - 2 * draggedBall.radius;
+          if (draggedBall.y < 0) draggedBall.y = 0;
+          if (draggedBall.y + 2 * draggedBall.radius > window.innerHeight) draggedBall.y = window.innerHeight - 2 * draggedBall.radius;
+    
+          draggedBall.element.style.left = draggedBall.x + 'px';
+          draggedBall.element.style.top = draggedBall.y + 'px';
+        }
+      });
+    
+      document.addEventListener('mouseup', (e) => {
+        if (draggedBall) {
+          draggedBall.element.style.cursor = 'grab';
+          draggedBall = null;
+        }
+      });
+    
+      function createBall(x, y) {
+        const radius = Math.random() * 20 + 10; // 10 to 30
+        const color = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
+        const ball = {
+          x: x - radius,
+          y: y - radius,
+          vx: Math.random() * 10 - 5,
+          vy: Math.random() * 10 - 5,
+          radius: radius,
+          color: color,
+          element: document.createElement('div')
+        };
+    
+        ball.element.classList.add('ball');
+        ball.element.style.left = ball.x + 'px';
+        ball.element.style.top = ball.y + 'px';
+        ball.element.style.width = ball.radius * 2 + 'px';
+        ball.element.style.height = ball.radius * 2 + 'px';
+        ball.element.style.backgroundColor = ball.color;
+    
+        document.body.appendChild(ball.element);
+        balls.push(ball);
+      }
+    
+      function update() {
+        balls.forEach(ball => {
+          if (ball === draggedBall) return;
+    
+          ball.vy += gravity;
+          ball.x += ball.vx;
+          ball.y += ball.vy;
+    
+          // Wall collisions
+          if (ball.x + ball.radius * 2 > window.innerWidth || ball.x < 0) {
+            ball.vx *= -friction;
+            if (ball.x < 0) ball.x = 0;
+            if (ball.x + ball.radius * 2 > window.innerWidth) ball.x = window.innerWidth - ball.radius * 2;
+            if (Math.abs(ball.vx) < minVelocity) ball.vx = 0;
+          }
+          if (ball.y + ball.radius * 2 > window.innerHeight || ball.y < 0) {
+            ball.vy *= -friction;
+            if (ball.y < 0) ball.y = 0;
+            if (ball.y + ball.radius * 2 > window.innerHeight) ball.y = window.innerHeight - ball.radius * 2;
+            if (Math.abs(ball.vy) < minVelocity) ball.vy = 0;
+            
+            // Apply friction to vx when hitting floor/ceiling
+             ball.vx *= friction;
+             if (Math.abs(ball.vx) < minVelocity) ball.vx = 0;
+          }
+    
+          ball.element.style.left = ball.x + 'px';
+          ball.element.style.top = ball.y + 'px';
+        });
+    
+        requestAnimationFrame(update);
+      }
+    
+      update();
+    
+    </script>
+    </body>
+    </html>
+    
