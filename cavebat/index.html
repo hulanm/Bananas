@@ -6,16 +6,15 @@
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; }
         #game-world { position: relative; width: 100vw; height: 100vh; background: linear-gradient(to bottom, #2c3e50, #000000); overflow: hidden; }
         
-        /* Updated #bat style for a larger size */
         #bat { 
             position: absolute; 
-            width: 100px; /* Increased from 50px */
-            height: 80px; /* Increased from 40px */
+            width: 100px; 
+            height: 80px; 
             background-image: url('bat.svg'); 
             background-size: contain; 
             background-repeat: no-repeat; 
             left: 50%; 
-            margin-left: -50px; /* Half of the new width to keep it centered */
+            margin-left: -50px; 
             z-index: 5; 
             transition: transform 0.1s; 
         }
@@ -74,7 +73,8 @@
             const rotation = Math.min(velocity * 3, 90);
             bat.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
             
-            if (batY < 0 || (batY + 80) > window.innerHeight) gameOver(); // Updated collision for larger height
+            // Adjusted ceiling and floor collision with 10px leeway
+            if ((batY + 10) < 0 || (batY + 70) > window.innerHeight) gameOver();
 
             obstacles.forEach((obj, index) => {
                 obj.right += 4;
@@ -85,8 +85,9 @@
                       topRect = obj.top.getBoundingClientRect(), 
                       bottomRect = obj.bottom.getBoundingClientRect();
                 
+                // Adjusted collision detection for dripstones with 10px margin on top and bottom
                 if (batRect.right > topRect.left && batRect.left < topRect.right) { 
-                    if (batRect.top < topRect.bottom || batRect.bottom > bottomRect.top) gameOver(); 
+                    if ((batRect.top + 10) < topRect.bottom || (batRect.bottom - 10) > bottomRect.top) gameOver(); 
                 }
                 
                 if (!obj.passed && topRect.right < batRect.left) { 
