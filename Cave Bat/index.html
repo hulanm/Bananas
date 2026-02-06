@@ -1,184 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaotic Pigeon Presents</title>
     <style>
-        /* General setup and Cave background */
-        body { margin: 0; overflow: hidden; background-color: #1a1a1a; }
-        #game-world {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(to bottom, #2c3e50, #000000);
-            overflow: hidden;
-        }
-        /* The Bat character - Using your uploaded Bat.svg */
-        #bat {
-            position: absolute;
-            width: 50px;
-            height: 40px;
-            background-image: url('Bat.svg');
-            background-size: contain;
-            background-repeat: no-repeat;
-            left: 50%;
-            margin-left: -25px; 
-            z-index: 5;
-            transition: transform 0.1s;
-        }
-        /* Dripstone (Stalactites and Stalagmites) */
-        .obstacle {
-            position: absolute;
-            width: 60px;
-            background-color: #8b4513;
-            right: -60px;
-        }
-        .top { top: 0; border-bottom: 10px solid #5d2e0c; border-radius: 0 0 10px 10px; }
-        .bottom { bottom: 0; border-top: 10px solid #5d2e0c; border-radius: 10px 10px 0 0; }
-        /* Scoreboard */
-        #score {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 36px;
-            z-index: 10;
-            text-shadow: 2px 2px #000;
-        }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        header { margin-top: 50px; margin-bottom: 20px; text-align: center; }
+        h1 { font-size: 2.5rem; font-weight: 800; color: #1a1a1a; margin: 0; }
+        h2 { margin-top: 40px; color: #333; }
+        .game-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 50px; }
+        
+        /* This creates the placeholder box where the game was */
+        .game-placeholder { width: 600px; height: 400px; background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 4px solid #fff; display: flex; justify-content: center; align-items: center; text-decoration: none; transition: transform 0.2s; background-size: cover; background-position: center; }
+        .game-placeholder:hover { transform: scale(1.02); background-color: #fafafa; }
+        
+        /* The Play Button style */
+        .play-btn { background: #1a1a1a; color: white; padding: 15px 40px; border-radius: 50px; font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .footer { margin-top: auto; padding: 40px; color: #666; }
+        @media (max-width: 650px) { .game-placeholder { width: 90vw; height: 60vw; } }
+
+        /* Specific Preview for Flappy Bat using your uploaded Bat.svg */
+        .bat-preview { background-image: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('Cave Bat/Bat.svg'); background-size: 150px; background-repeat: no-repeat; }
     </style>
 </head>
 <body>
-    <div id="game-world">
-        <div id="score">Score: 0</div>
-        <div id="bat"></div>
+    <header><h1>Chaotic Pigeon Presents...</h1></header>
+
+    <div class="game-wrapper">
+        <h2>Bouncy Ball</h2>
+        <a href="bouncyball/index.html" target="_blank" class="game-placeholder">
+            <div class="play-btn">Play Game ▶</div>
+        </a>
     </div>
 
-    <script>
-        const bat = document.getElementById('bat');
-        const gameWorld = document.getElementById('game-world');
-        const scoreElement = document.getElementById('score');
-        
-        // Load your uploaded sound
-        const flapSound = new Audio('mixkit-air-woosh-1489.wav');
-        
-        let batY = window.innerHeight / 2 - 20;
-        let velocity = 0;
-        let gravity = 0.35;
-        let score = 0;
-        let gameActive = true;
-        let obstacles = [];
+    <div class="game-wrapper">
+        <h2>Stickman Adventure</h2>
+        <a href="stickman/index.html" target="_blank" class="game-placeholder">
+            <div class="play-btn">Play Game ▶</div>
+        </a>
+    </div>
 
-        function flap() {
-            if (gameActive) {
-                velocity = -6.5; 
-                bat.style.transform = "rotate(-20deg)";
-                flapSound.currentTime = 0; // Reset sound to start
-                flapSound.play(); // Play your whoosh sound
-            } else {
-                resetGame();
-            }
-        }
+    <div class="game-wrapper">
+        <h2>Flappy Bat</h2>
+        <a href="Cave%20Bat/index.html" target="_blank" class="game-placeholder bat-preview">
+            <div class="play-btn">Play Game ▶</div>
+        </a>
+    </div>
 
-        function createObstacle() {
-            const gap = 220; 
-            const minHeight = 60;
-            const topHeight = Math.random() * (window.innerHeight - gap - (minHeight * 2)) + minHeight;
-            
-            const topPipe = document.createElement('div');
-            topPipe.className = 'obstacle top';
-            topPipe.style.height = topHeight + 'px';
-            topPipe.style.right = '-60px';
-            
-            const bottomPipe = document.createElement('div');
-            bottomPipe.className = 'obstacle bottom';
-            bottomPipe.style.height = (window.innerHeight - topHeight - gap) + 'px';
-            bottomPipe.style.right = '-60px';
-
-            gameWorld.appendChild(topPipe);
-            gameWorld.appendChild(bottomPipe);
-            
-            obstacles.push({
-                top: topPipe,
-                bottom: bottomPipe,
-                right: -60,
-                passed: false
-            });
-        }
-
-        function update() {
-            if (!gameActive) return;
-
-            velocity += gravity;
-            batY += velocity;
-            bat.style.top = batY + 'px';
-            
-            const rotation = Math.min(velocity * 3, 90);
-            bat.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
-
-            if (batY < 0 || (batY + 40) > window.innerHeight) {
-                gameOver();
-            }
-
-            obstacles.forEach((obj, index) => {
-                obj.right += 4; 
-                obj.top.style.right = obj.right + 'px';
-                obj.bottom.style.right = obj.right + 'px';
-
-                const batRect = bat.getBoundingClientRect();
-                const topRect = obj.top.getBoundingClientRect();
-                const bottomRect = obj.bottom.getBoundingClientRect();
-
-                if (batRect.right > topRect.left && batRect.left < topRect.right) {
-                    if (batRect.top < topRect.bottom || batRect.bottom > bottomRect.top) {
-                        gameOver();
-                    }
-                }
-
-                if (!obj.passed && topRect.right < batRect.left) {
-                    obj.passed = true;
-                    score++;
-                    scoreElement.innerText = 'Score: ' + score;
-                }
-
-                if (obj.right > window.innerWidth + 100) {
-                    obj.top.remove();
-                    obj.bottom.remove();
-                    obstacles.splice(index, 1);
-                }
-            });
-
-            requestAnimationFrame(update);
-        }
-
-        function gameOver() {
-            gameActive = false;
-            setTimeout(() => {
-                alert("Game Over!\nScore: " + score + "\nPress Space to Restart");
-            }, 10);
-        }
-
-        function resetGame() {
-            batY = window.innerHeight / 2 - 20;
-            velocity = 0;
-            score = 0;
-            scoreElement.innerText = 'Score: 0';
-            obstacles.forEach(obj => {
-                obj.top.remove();
-                obj.bottom.remove();
-            });
-            obstacles = [];
-            gameActive = true;
-            update();
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault(); 
-                flap();
-            }
-        });
-
-        setInterval(() => { if (gameActive) createObstacle(); }, 2200);
-        update();
-    </script>
+    <div class="footer"><p>Built by Elliott</p></div>
 </body>
 </html>
