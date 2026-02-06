@@ -1,1 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; }
+        #game-world {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #2c3e50, #000000);
+            overflow: hidden;
+        }
+        /* Updated Bat styling to ensure it is visible */
+        #bat {
+            position: absolute;
+            width: 40px;
+            height: 30px;
+            background-color: #8a2be2; /* Bright Purple so you can see it easily */
+            border-radius: 50% 50% 20% 20%;
+            left: 50%;
+            margin-left: -20px; 
+            z-index: 100; /* Keeps it on top of everything */
+            box-shadow: 0 0 10px #fff; /* Adds a small glow */
+        }
+        .obstacle {
+            position: absolute;
+            width: 60px;
+            background-color: #8b4513;
+            right: -60px;
+        }
+        .top { top: 0; border-bottom: 10px solid #5d2e0c; }
+        .bottom { bottom: 0; border-top: 10px solid #5d2e0c; }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 36px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-world">
+        <div id="score">Score: 0</div>
+        <div id="bat"></div>
+    </div>
 
+    <script>
+        const bat = document.getElementById('bat');
+        const gameWorld = document.getElementById('game-world');
+        const scoreElement = document.getElementById('score');
+        
+        let batY = window.innerHeight / 2;
+        let velocity = 0;
+        let gravity = 0.35;
+        let score = 0;
+        let gameActive = true;
+        let obstacles = [];
+
+        function flap() {
+            if (gameActive) {
+                velocity = -6.5; 
+            } else {
+                resetGame();
+            }
+        }
+
+        function createObstacle() {
+            const gap = 220; 
+            const minHeight = 60;
+            const topHeight = Math.random() * (window.innerHeight - gap - (minHeight * 2)) + minHeight;
+            
+            const topPipe = document.createElement('div');
+            topPipe.className = 'obstacle top';
+            topPipe.style.height = topHeight + 'px';
+            topPipe.style.right = '-60px';
+            
+            const bottomPipe = document.createElement('div');
+            bottomPipe.className = 'obstacle bottom';
+            bottomPipe.style.height = (window.innerHeight - topHeight - gap) + 'px';
+            bottomPipe.style.right = '-60px';
+
+            gameWorld.appendChild(topPipe);
+            gameWorld.appendChild(bottomPipe);
+            
+            obstacles.push({
+                top: topPipe,
+                bottom: bottomPipe,
+                right: -60,
+                passed: false
+            });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            velocity += gravity;
+            batY += velocity;
+            bat.style.top = batY + 'px';
+            
+            // Ceiling and Floor collision
+            if (batY < 0 || (batY + 30) > window.innerHeight) {
+                gameOver();
+            }
+
+            obstacles.forEach((obj, index) => {
+                obj.right += 4; 
+                obj.top.style.right = obj.right + 'px';
+                obj.bottom.style.right = obj.right + 'px';
+
+                const batRect = bat.getBoundingClientRect();
+                const topRect = obj.top.getBoundingClientRect();
+                const bottomRect = obj.bottom.getBoundingClientRect();
+
+                if (batRect.right > topRect.left && batRect.left < topRect.right) {
+                    if (batRect.top < topRect.bottom || batRect.bottom > bottomRect.top) {
+                        gameOver();
+                    }
+                }
+
+                if (!obj.passed && topRect.right < batRect.left) {
+                    obj.passed = true;
+                    score++;
+                    scoreElement.innerText = 'Score: ' + score;
+                }
+
+                if (obj.right > window.innerWidth + 100) {
+                    obj.top.remove();
+                    obj.bottom.remove();
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            alert("Game Over! Score: " + score);
+        }
+
+        function resetGame() {
+            batY = window.innerHeight / 2;
+            velocity = 0;
+            score = 0;
+            scoreElement.innerText = 'Score: 0';
+            obstacles.forEach(obj => {
+                obj.top.remove();
+                obj.bottom.remove();
+            });
+            obstacles = [];
+            gameActive = true;
+            update();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault(); 
+                flap();
+            }
+        });
+
+        setInterval(() => { if (gameActive) createObstacle(); }, 2200);
+        update();
+    </script>
+</body>
+</html>
