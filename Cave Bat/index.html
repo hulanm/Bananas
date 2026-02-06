@@ -2,6 +2,7 @@
 <html>
 <head>
     <style>
+        /* General setup and Cave background */
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; }
         #game-world {
             position: relative;
@@ -10,34 +11,38 @@
             background: linear-gradient(to bottom, #2c3e50, #000000);
             overflow: hidden;
         }
-        /* Updated Bat styling to ensure it is visible */
+        /* The Bat character - Using your uploaded Bat.svg */
         #bat {
             position: absolute;
-            width: 40px;
-            height: 30px;
-            background-color: #8a2be2; /* Bright Purple so you can see it easily */
-            border-radius: 50% 50% 20% 20%;
+            width: 50px;
+            height: 40px;
+            background-image: url('Bat.svg');
+            background-size: contain;
+            background-repeat: no-repeat;
             left: 50%;
-            margin-left: -20px; 
-            z-index: 100; /* Keeps it on top of everything */
-            box-shadow: 0 0 10px #fff; /* Adds a small glow */
+            margin-left: -25px; 
+            z-index: 5;
+            transition: transform 0.1s;
         }
+        /* Dripstone (Stalactites and Stalagmites) */
         .obstacle {
             position: absolute;
             width: 60px;
             background-color: #8b4513;
             right: -60px;
         }
-        .top { top: 0; border-bottom: 10px solid #5d2e0c; }
-        .bottom { bottom: 0; border-top: 10px solid #5d2e0c; }
+        .top { top: 0; border-bottom: 10px solid #5d2e0c; border-radius: 0 0 10px 10px; }
+        .bottom { bottom: 0; border-top: 10px solid #5d2e0c; border-radius: 10px 10px 0 0; }
+        /* Scoreboard */
         #score {
             position: absolute;
             top: 20px;
             left: 20px;
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Courier New', Courier, monospace;
             font-size: 36px;
             z-index: 10;
+            text-shadow: 2px 2px #000;
         }
     </style>
 </head>
@@ -52,7 +57,10 @@
         const gameWorld = document.getElementById('game-world');
         const scoreElement = document.getElementById('score');
         
-        let batY = window.innerHeight / 2;
+        // Load your uploaded sound
+        const flapSound = new Audio('mixkit-air-woosh-1489.wav');
+        
+        let batY = window.innerHeight / 2 - 20;
         let velocity = 0;
         let gravity = 0.35;
         let score = 0;
@@ -62,6 +70,9 @@
         function flap() {
             if (gameActive) {
                 velocity = -6.5; 
+                bat.style.transform = "rotate(-20deg)";
+                flapSound.currentTime = 0; // Reset sound to start
+                flapSound.play(); // Play your whoosh sound
             } else {
                 resetGame();
             }
@@ -100,8 +111,10 @@
             batY += velocity;
             bat.style.top = batY + 'px';
             
-            // Ceiling and Floor collision
-            if (batY < 0 || (batY + 30) > window.innerHeight) {
+            const rotation = Math.min(velocity * 3, 90);
+            bat.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+
+            if (batY < 0 || (batY + 40) > window.innerHeight) {
                 gameOver();
             }
 
@@ -138,11 +151,13 @@
 
         function gameOver() {
             gameActive = false;
-            alert("Game Over! Score: " + score);
+            setTimeout(() => {
+                alert("Game Over!\nScore: " + score + "\nPress Space to Restart");
+            }, 10);
         }
 
         function resetGame() {
-            batY = window.innerHeight / 2;
+            batY = window.innerHeight / 2 - 20;
             velocity = 0;
             score = 0;
             scoreElement.innerText = 'Score: 0';
