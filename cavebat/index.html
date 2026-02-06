@@ -73,8 +73,8 @@
             const rotation = Math.min(velocity * 3, 90);
             bat.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
             
-            // Adjusted ceiling and floor collision with 10px leeway
-            if ((batY + 10) < 0 || (batY + 70) > window.innerHeight) gameOver();
+            // INCREASED: Ceiling and floor collision now have 20px leeway
+            if ((batY + 20) < 0 || (batY + 60) > window.innerHeight) gameOver();
 
             obstacles.forEach((obj, index) => {
                 obj.right += 4;
@@ -85,9 +85,9 @@
                       topRect = obj.top.getBoundingClientRect(), 
                       bottomRect = obj.bottom.getBoundingClientRect();
                 
-                // Adjusted collision detection for dripstones with 10px margin on top and bottom
+                // INCREASED: Collision detection for dripstones now uses a 20px margin
                 if (batRect.right > topRect.left && batRect.left < topRect.right) { 
-                    if ((batRect.top + 10) < topRect.bottom || (batRect.bottom - 10) > bottomRect.top) gameOver(); 
+                    if ((batRect.top + 20) < topRect.bottom || (batRect.bottom - 20) > bottomRect.top) gameOver(); 
                 }
                 
                 if (!obj.passed && topRect.right < batRect.left) { 
