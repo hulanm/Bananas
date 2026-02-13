@@ -3,53 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chaotic Pigeon Presents</title>
+    <title>Games</title>
     <style>
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        header { margin-top: 50px; margin-bottom: 20px; text-align: center; }
-        h1 { font-size: 2.5rem; font-weight: 800; color: #1a1a1a; margin: 0; }
-        h2 { margin-top: 40px; color: #333; }
-        .game-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 50px; }
-        
-        .game-placeholder { width: 600px; height: 400px; background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 4px solid #fff; display: flex; justify-content: center; align-items: center; text-decoration: none; transition: transform 0.2s; background-size: cover; background-position: center; }
-        .game-placeholder:hover { transform: scale(1.02); background-color: #fafafa; }
-        
-        .play-btn { background: #1a1a1a; color: white; padding: 15px 40px; border-radius: 50px; font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .footer { margin-top: auto; padding: 40px; color: #666; }
-        @media (max-width: 650px) { .game-placeholder { width: 90vw; height: 60vw; } }
-
-        /* Preview using the bat.svg from your lowercase cavebat folder */
-        .bat-preview { 
-            background-image: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('cavebat/bat.svg'); 
-            background-size: 150px; 
-            background-repeat: no-repeat; 
+        body {
+            background-color: #e0f7fa;
+            color: #00796b;
+            font-family: 'Arial', sans-serif;
+        }
+        h1 {
+            color: #d81b60;
+        }
+        .game-container {
+            border: 2px solid #00796b;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 <body>
-    <header><h1>Chaotic Pigeon Presents...</h1></header>
-
-    <div class="game-wrapper">
-        <h2>Bouncy Ball</h2>
-        <a href="bouncyball/index.html" target="_blank" class="game-placeholder">
-            <div class="play-btn">Play Game ▶</div>
-        </a>
+    <h1>Welcome to Fun Games!</h1>
+    <div class="game-container">
+        <h2>Snake Game</h2>
+        <p>Play the classic Snake Game! Try to eat as many apples as possible without hitting the walls!</p>
+        <button>Start Snake Game</button>
     </div>
-
-    <div class="game-wrapper">
-        <h2>Stickman Adventure</h2>
-        <a href="stickman/index.html" target="_blank" class="game-placeholder">
-            <div class="play-btn">Play Game ▶</div>
-        </a>
+    <div class="game-container">
+        <h2>Dog Clicker Game</h2>
+        <p>Click the button to feed your dog and make it grow. How big can your dog get?</p>
+        <button>Start Dog Clicker Game</button>
     </div>
-
-    <div class="game-wrapper">
-        <h2>Flappy Bat</h2>
-        <a href="cavebat/" target="_blank" class="game-placeholder bat-preview">
-            <div class="play-btn">Play Game ▶</div>
-        </a>
-    </div>
-
-    <div class="footer"><p>Built by Elliott</p></div>
 </body>
 </html>
