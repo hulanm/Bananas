@@ -15,7 +15,8 @@
         .game-placeholder:hover { transform: scale(1.02); }
         
         .play-btn { background: #1a1a1a; color: white; padding: 15px 40px; border-radius: 50px; font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .footer { margin-top: auto; padding: 40px; color: #666; }
+        .footer { margin-top: auto; padding: 40px; color: #666; text-align: center; }
+        .visitor-count { font-size: 0.9rem; margin-top: 20px; color: #999; }
         @media (max-width: 650px) { .game-placeholder { width: 90vw; height: 60vw; } }
 
         /* Game previews - Different colors */
@@ -37,6 +38,10 @@
         
         .dog-preview {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .rocket-preview {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF0000 100%);
         }
     </style>
 </head>
@@ -78,6 +83,31 @@
         </a>
     </div>
 
-    <div class="footer"><p>Built by Elliott</p></div>
+    <div class="game-wrapper">
+        <h2>Rocket Ship</h2>
+        <a href="https://elliottkodish.com/rocketship" target="_blank" class="game-placeholder rocket-preview">
+            <div class="play-btn">Play Game ▶</div>
+        </a>
+    </div>
+
+    <div class="footer">
+        <p>Built by Elliott</p>
+        <div class="visitor-count">
+            👥 Visitors: <span id="visitor-count">Loading...</span>
+        </div>
+    </div>
+
+    <script>
+        // Simple visitor counter using localStorage
+        function updateVisitorCount() {
+            let visitCount = localStorage.getItem('visitCount');
+            visitCount = visitCount ? parseInt(visitCount) + 1 : 1;
+            localStorage.setItem('visitCount', visitCount);
+            document.getElementById('visitor-count').textContent = visitCount;
+        }
+        
+        // Update count on page load
+        window.addEventListener('load', updateVisitorCount);
+    </script>
 </body>
 </html>
