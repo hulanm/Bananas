@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catapult Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+       
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+       
+        #gameContainer {
+            position: relative;
+            width: 1000px;
+            height: 600px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 85%, #8B7355 85%, #8B7355 100%);
+            border: 4px solid #333;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+       
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+       
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-size: 18px;
+            font-weight: bold;
+        }
+       
+        #score {
+            margin-bottom: 10px;
+        }
+       
+        #shotsRemaining {
+            margin-bottom: 10px;
+            font-size: 20px;
+            padding: 5px 10px;
+            background: rgba(255, 0, 0, 0.5);
+            border-radius: 5px;
+        }
+       
+        #shotsRemaining.warning {
+            animation: pulse 0.5s infinite;
+        }
+       
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+       
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            padding: 15px 30px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+            z-index: 100;
+        }
+       
+        .control-item {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+       
+        .slider-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 8px 0;
+        }
+       
+        input[type="range"] {
+            width: 150px;
+            cursor: pointer;
+        }
+       
+        .slider-label {
+            min-width: 100px;
+            font-weight: bold;
+        }
+       
+        #instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            max-width: 250px;
+            z-index: 100;
+        }
+       
+        #instructions h3 {
+            margin-bottom: 10px;
+            color: #FFD700;
+        }
+       
+        #instructions p {
+            margin: 5px 0;
+            line-height: 1.4;
+        }
+       
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            flex-direction: column;
+            gap: 20px;
+        }
+       
+        #gameOverScreen.show {
+            display: flex;
+        }
+       
+        #gameOverText {
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+        }
+       
+        #gameOverText.win {
+            color: #FFD700;
+        }
+       
+        #gameOverText.lose {
+            color: #FF6B35;
+        }
+       
+        #restartButton {
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+       
+        #restartButton:hover {
+            background: #FF8C42;
+        }
+       
+        #fireButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+       
+        <div id="ui">
+            <div id="score">Score: 0</div>
+            <div id="level">Level: 1</div>
+            <div id="shotsRemaining">Shots Left: 5</div>
+        </div>
+       
+        <div id="instructions">
+            <h3>How to Play</h3>
+            <p>📍 Adjust angle and power</p>
+            <p>🎯 You have 5 shots!</p>
+            <p>💥 Line up to hit multiple enemies</p>
+            <p>⚡ Enemies are MOVING!</p>
+            <p id="levelInfo">Enemies: 5</p>
+        </div>
+       
+        <div id="controls">
+            <div class="slider-container">
+                <span class="slider-label">Angle:</span>
+                <input type="range" id="angleSlider" min="0" max="90" value="45">
+                <span id="angleValue">45°</span>
+            </div>
+            <div class="slider-container">
+                <span class="slider-label">Power:</span>
+                <input type="range" id="powerSlider" min="10" max="100" value="50">
+                <span id="powerValue">50</span>
+            </div>
+            <button id="fireButton" style="padding: 10px 30px; font-size: 16px; font-weight: bold; background: #FF6B35; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">FIRE!</button>
+        </div>
+       
+        <div id="gameOverScreen">
+            <div id="gameOverText"></div>
+            <button id="restartButton">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1000;
+        canvas.height = 600;
+       
+        // UI Elements
+        const angleSlider = document.getElementById('angleSlider');
+        const powerSlider = document.getElementById('powerSlider');
+        const angleValue = document.getElementById('angleValue');
+        const powerValue = document.getElementById('powerValue');
+        const fireButton = document.getElementById('fireButton');
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const levelInfo = document.getElementById('levelInfo');
+        const shotsDisplay = document.getElementById('shotsRemaining');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const gameOverText = document.getElementById('gameOverText');
+        const restartButton = document.getElementById('restartButton');
+       
+        // Game Variables
+        let score = 0;
+        let level = 1;
+        let projectiles = [];
+        let enemies = [];
+        let gameActive = true;
+        let shotsRemaining = 5;
+        const maxShots = 5;
+       
+        // Catapult position and properties
+        const catapult = {
+            x: 80,
+            y: 480,
+            armLength: 60,
+            baseRadius: 30
+        };
+       
+        // Physics
+        const gravity = 0.5;
+        const groundY = 510;
+       
+        // Audio Context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+       
+        // Play cannon fire sound
+        function playCannonSound() {
+            const now = audioContext.currentTime;
+           
+            // Create oscillator for the main boom sound
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+           
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+           
+            // Cannon boom effect - low frequency sweep down
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+           
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+           
+            osc.start(now);
+            osc.stop(now + 0.2);
+           
+            // Add impact click
+            const clickOsc = audioContext.createOscillator();
+            const clickGain = audioContext.createGain();
+           
+            clickOsc.connect(clickGain);
+            clickGain.connect(audioContext.destination);
+           
+            clickOsc.frequency.setValueAtTime(200, now);
+            clickGain.gain.setValueAtTime(0.2, now);
+            clickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+           
+            clickOsc.start(now);
+            clickOsc.stop(now + 0.1);
+        }
+       
+        // Play enemy hit/death sound
+        function playHitSound() {
+            const now = audioContext.currentTime;
+           
+            // Create a "pop" sound
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+           
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+           
+            // High pitched pop that goes down
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+           
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+           
+            osc.start(now);
+            osc.stop(now + 0.15);
+           
+            // Add a second higher pitch for variety
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+           
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+           
+            osc2.frequency.setValueAtTime(1200, now);
+            osc2.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+           
+            gain2.gain.setValueAtTime(0.2, now);
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+           
+            osc2.start(now);
+            osc2.stop(now + 0.1);
+        }
+       
+        // Enemy class
+        class Enemy {
+            constructor(x, y, size = 25) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.health = 1;
+                this.maxHealth = 1;
+                this.hit = false;
+               
+                // Movement properties
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.minX = 200;
+                this.maxX = 950;
+                this.minY = 80;
+                this.maxY = 320;
+                this.directionChangeTimer = 0;
+                this.directionChangeInterval = Math.random() * 60 + 40;
+            }
+           
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+               
+                if (this.x - this.size < this.minX || this.x + this.size > this.maxX) {
+                    this.vx *= -1;
+                    this.x = Math.max(this.minX + this.size, Math.min(this.maxX - this.size, this.x));
+                }
+               
+                if (this.y - this.size < this.minY || this.y + this.size > this.maxY) {
+                    this.vy *= -1;
+                    this.y = Math.max(this.minY + this.size, Math.min(this.maxY - this.size, this.y));
+                }
+               
+                this.directionChangeTimer++;
+                if (this.directionChangeTimer > this.directionChangeInterval) {
+                    this.vx = (Math.random() - 0.5) * 4;
+                    this.vy = (Math.random() - 0.5) * 2;
+                    this.directionChangeTimer = 0;
+                    this.directionChangeInterval = Math.random() * 60 + 40;
+                }
+            }
+           
+            draw() {
+                ctx.fillStyle = this.hit ? '#FF9999' : '#E74C3C';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+               
+                ctx.strokeStyle = '#C0392B';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.stroke();
+               
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.x - 8, this.y - 5, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + 8, this.y - 5, 5, 0, Math.PI * 2);
+                ctx.fill();
+               
+                ctx.fillStyle = 'black';
+                const pupilOffsetX = Math.sign(this.vx) * 1.5;
+                const pupilOffsetY = Math.sign(this.vy) * 1.5;
+                ctx.beginPath();
+                ctx.arc(this.x - 8 + pupilOffsetX, this.y - 5 + pupilOffsetY, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + 8 + pupilOffsetX, this.y - 5 + pupilOffsetY, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+               
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y + 5, 8, 0, Math.PI);
+                ctx.stroke();
+               
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 1;
+                for (let i = 1; i <= 3; i++) {
+                    const trailX = this.x - this.vx * i * 3;
+                    const trailY = this.y - this.vy * i * 3;
+                    ctx.beginPath();
+                    ctx.moveTo(trailX, trailY);
+                    ctx.lineTo(trailX - this.vx * 2, trailY - this.vy * 2);
+                    ctx.stroke();
+                }
+            }
+           
+            takeDamage(damage = 1) {
+                this.health -= damage;
+                this.hit = true;
+                return this.health <= 0;
+            }
+        }
+       
+        // Projectile class
+        class Projectile {
+            constructor(x, y, vx, vy) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.radius = 8;
+                this.trailPoints = [];
+                this.penetrating = true;
+            }
+           
+            update() {
+                this.vy += gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+               
+                this.trailPoints.push({x: this.x, y: this.y});
+                if (this.trailPoints.length > 30) {
+                    this.trailPoints.shift();
+                }
+            }
+           
+            draw() {
+                ctx.strokeStyle = 'rgba(255, 200, 0, 0.4)';
+                ctx.lineWidth = 3;
+                if (this.trailPoints.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.trailPoints[0].x, this.trailPoints[0].y);
+                    for (let i = 1; i < this.trailPoints.length; i++) {
+                        ctx.lineTo(this.trailPoints[i].x, this.trailPoints[i].y);
+                    }
+                    ctx.stroke();
+                }
+               
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+               
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+               
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.beginPath();
+                ctx.arc(this.x - 3, this.y - 3, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+           
+            isOffScreen() {
+                return this.x > canvas.width + 50 || this.y > canvas.height + 50 || this.x < -50;
+            }
+        }
+       
+        // Draw catapult
+        function drawCatapult(angle) {
+            const angleRad = (angle * Math.PI) / 180;
+           
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.arc(catapult.x, catapult.y, catapult.baseRadius, 0, Math.PI * 2);
+            ctx.fill();
+           
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(catapult.x, catapult.y, catapult.baseRadius - 5, 0, Math.PI * 2);
+            ctx.stroke();
+           
+            const armEndX = catapult.x + Math.cos(angleRad) * catapult.armLength;
+            const armEndY = catapult.y - Math.sin(angleRad) * catapult.armLength;
+           
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(catapult.x, catapult.y);
+            ctx.lineTo(armEndX, armEndY);
+            ctx.stroke();
+           
+            ctx.fillStyle = '#FF6B35';
+            ctx.beginPath();
+            ctx.arc(armEndX, armEndY, 12, 0, Math.PI * 2);
+            ctx.fill();
+           
+            ctx.fillStyle = '#FF8C42';
+            ctx.beginPath();
+            ctx.arc(armEndX, armEndY, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+       
+        // Draw ground
+        function drawGround() {
+            ctx.fillStyle = '#8B7355';
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+           
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 20) {
+                ctx.beginPath();
+                ctx.moveTo(x, groundY);
+                ctx.lineTo(x + 10, groundY - 10);
+                ctx.stroke();
+            }
+        }
+       
+        // Draw trajectory preview
+        function drawTrajectoryPreview(angle, power) {
+            const angleRad = (angle * Math.PI) / 180;
+            const speed = power * 0.5;
+            const armLength = 60;
+           
+            const startX = catapult.x + Math.cos(angleRad) * armLength;
+            const startY = catapult.y - Math.sin(angleRad) * armLength;
+           
+            let vx = Math.cos(angleRad) * speed;
+            let vy = -Math.sin(angleRad) * speed;
+            let x = startX;
+            let y = startY;
+           
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+           
+            for (let i = 0; i < 150; i++) {
+                vy += gravity;
+                x += vx;
+                y += vy;
+               
+                if (y > groundY) break;
+                ctx.lineTo(x, y);
+            }
+           
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+       
+        // Fire projectile
+        function fireProjectile() {
+            if (!gameActive || shotsRemaining <= 0) return;
+           
+            // Play cannon sound
+            playCannonSound();
+           
+            const angle = parseFloat(angleSlider.value);
+            const power = parseFloat(powerSlider.value);
+            const angleRad = (angle * Math.PI) / 180;
+            const speed = power * 0.5;
+           
+            const armLength = 60;
+            const startX = catapult.x + Math.cos(angleRad) * armLength;
+            const startY = catapult.y - Math.sin(angleRad) * armLength;
+           
+            const vx = Math.cos(angleRad) * speed;
+            const vy = -Math.sin(angleRad) * speed;
+           
+            projectiles.push(new Projectile(startX, startY, vx, vy));
+           
+            shotsRemaining--;
+            updateShotsDisplay();
+           
+            fireButton.disabled = true;
+            setTimeout(() => {
+                if (shotsRemaining > 0 && gameActive) {
+                    fireButton.disabled = false;
+                }
+            }, 300);
+           
+            if (shotsRemaining === 0 && enemies.length > 0) {
+                setTimeout(() => {
+                    if (gameActive && enemies.length > 0) {
+                        endGame(false);
+                    }
+                }, 1000);
+            }
+        }
+       
+        // Update shots display
+        function updateShotsDisplay() {
+            shotsDisplay.textContent = `Shots Left: ${shotsRemaining}`;
+           
+            if (shotsRemaining <= 1) {
+                shotsDisplay.classList.add('warning');
+            }
+           
+            if (shotsRemaining === 0) {
+                fireButton.disabled = true;
+            }
+        }
+       
+        // Initialize level
+        function initLevel() {
+            const enemyCount = 4 + level * 2;
+            enemies = [];
+            shotsRemaining = maxShots;
+            updateShotsDisplay();
+            fireButton.disabled = false;
+           
+            for (let i = 0; i < enemyCount; i++) {
+                let x, y;
+                let validPosition = false;
+               
+                while (!validPosition) {
+                    x = 250 + Math.random() * 650;
+                    y = 100 + Math.random() * 200;
+                   
+                    validPosition = true;
+                    for (let enemy of enemies) {
+                        const dx = x - enemy.x;
+                        const dy = y - enemy.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < 100) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                }
+               
+                enemies.push(new Enemy(x, y));
+            }
+           
+            levelInfo.textContent = `Enemies: ${enemyCount}`;
+        }
+       
+        // Check collisions
+        function checkCollisions() {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const proj = projectiles[i];
+                let hitEnemy = false;
+               
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    const dx = proj.x - enemy.x;
+                    const dy = proj.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                   
+                    if (distance < proj.radius + enemy.size) {
+                        if (enemy.takeDamage()) {
+                            // Play hit sound when enemy dies
+                            playHitSound();
+                           
+                            enemies.splice(j, 1);
+                            score += 25 * level;
+                            scoreDisplay.textContent = 'Score: ' + score;
+                        }
+                        hitEnemy = true;
+                    }
+                }
+               
+                if (!hitEnemy && proj.isOffScreen()) {
+                    projectiles.splice(i, 1);
+                }
+            }
+        }
+       
+        // Update game
+        function updateGame() {
+            enemies.forEach(enemy => enemy.update());
+           
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                projectiles[i].update();
+               
+                if (projectiles[i].isOffScreen() || projectiles[i].y > groundY) {
+                    projectiles.splice(i, 1);
+                }
+            }
+           
+            checkCollisions();
+           
+            if (enemies.length === 0 && gameActive) {
+                endGame(true);
+            }
+        }
+       
+        // End game
+        function endGame(won) {
+            gameActive = false;
+            fireButton.disabled = true;
+           
+            if (won) {
+                gameOverText.textContent = `🎉 LEVEL ${level} COMPLETE! 🎉`;
+                gameOverText.classList.add('win');
+                gameOverText.classList.remove('lose');
+            } else {
+                gameOverText.textContent = `💥 GAME OVER! 💥`;
+                gameOverText.classList.add('lose');
+                gameOverText.classList.remove('win');
+            }
+           
+            gameOverScreen.classList.add('show');
+        }
+       
+        // Restart game
+        function restartGame() {
+            score = 0;
+            level = 1;
+            projectiles = [];
+            gameActive = true;
+            shotsRemaining = maxShots;
+           
+            scoreDisplay.textContent = 'Score: 0';
+            levelDisplay.textContent = 'Level: 1';
+            shotsDisplay.classList.remove('warning');
+           
+            gameOverScreen.classList.remove('show');
+            gameOverText.classList.remove('win');
+            gameOverText.classList.remove('lose');
+           
+            initLevel();
+        }
+       
+        // Draw game
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+           
+            drawGround();
+           
+            if (!gameOverScreen.classList.contains('show')) {
+                const angle = parseFloat(angleSlider.value);
+                const power = parseFloat(powerSlider.value);
+                drawTrajectoryPreview(angle, power);
+            }
+           
+            const angle = parseFloat(angleSlider.value);
+            drawCatapult(angle);
+           
+            enemies.forEach(enemy => enemy.draw());
+           
+            projectiles.forEach(proj => proj.draw());
+        }
+       
+        // Game loop
+        function gameLoop() {
+            updateGame();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+       
+        // Event listeners
+        angleSlider.addEventListener('input', (e) => {
+            angleValue.textContent = e.target.value + '°';
+        });
+       
+        powerSlider.addEventListener('input', (e) => {
+            powerValue.textContent = e.target.value;
+        });
+       
+        fireButton.addEventListener('click', fireProjectile);
+        restartButton.addEventListener('click', restartGame);
+       
+        document.addEventListener('keypress', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                fireProjectile();
+            }
+        });
+       
+        initLevel();
+        gameLoop();
+    </script>
+</body>
+</html>
