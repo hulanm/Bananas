@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Clicker Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            max-width: 1200px;
+        }
+
+        .main-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            min-width: 400px;
+        }
+
+        h1 {
+            color: #ff6b6b;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .dog-counter {
+            font-size: 2em;
+            color: #333;
+            font-weight: bold;
+            background: #ffe0b2;
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 3px solid #ff9a56;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .dog-counter span {
+            color: #ff6b6b;
+            font-size: 1.2em;
+        }
+
+        .dog-button-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dog-button {
+            width: 150px;
+            height: 150px;
+            font-size: 80px;
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .dog-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .dog-button:active {
+            transform: scale(0.95);
+        }
+
+        .cat-orbit {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            top: 0;
+            left: 0;
+            animation: spin 6s linear infinite;
+        }
+
+        .cat {
+            position: absolute;
+            font-size: 40px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .plus-one {
+            position: fixed;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 1.5em;
+            color: #ff6b6b;
+            animation: float-up 1s ease-out;
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+        }
+
+        .stats {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            width: 100%;
+            text-align: center;
+            border: 2px solid #ff9a56;
+        }
+
+        .stats-item {
+            font-size: 1.1em;
+            color: #333;
+            margin: 8px 0;
+        }
+
+        .stats-item span {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .upgrades-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            min-width: 350px;
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .upgrades-section h2 {
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.8em;
+        }
+
+        .upgrade-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .upgrade-item:hover {
+            border-color: #ff9a56;
+            box-shadow: 0 4px 15px rgba(255, 154, 86, 0.2);
+        }
+
+        .upgrade-item.locked {
+            opacity: 0.5;
+            background: #f0f0f0;
+        }
+
+        .upgrade-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .upgrade-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .upgrade-cost {
+            color: #ff6b6b;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-button {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .upgrade-button:not(:disabled) {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .upgrade-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        .upgrade-button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .upgrade-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        .owned {
+            color: #4caf50;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .main-section, .upgrades-section {
+                min-width: auto;
+                width: 100%;
+                max-width: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-section">
+            <h1>🐕 Dog Clicker</h1>
+           
+            <div class="dog-counter">
+                Dogs: <span id="dogCount">0</span>
+            </div>
+
+            <div class="dog-button-container">
+                <button class="dog-button" id="dogButton">🐕</button>
+                <div class="cat-orbit" id="catOrbit"></div>
+            </div>
+
+            <div class="stats">
+                <div class="stats-item">
+                    Dogs per second: <span id="dogsPerSecond">0</span>
+                </div>
+                <div class="stats-item">
+                    Total clicks: <span id="totalClicks">0</span>
+                </div>
+                <div class="stats-item">
+                    Tiny cats owned: <span id="catCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="upgrades-section">
+            <h2>🛒 Upgrades</h2>
+            <div id="upgradesContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let dogs = 0;
+        let totalClicks = 0;
+        let dogsPerSecond = 0;
+        let lastRenderTime = 0;
+
+        // Upgrades data
+        const upgrades = [
+            {
+                id: 'cat',
+                name: '🐱 Tiny Cat',
+                description: 'Gives you 1 dog per second',
+                cost: 10,
+                owned: 0,
+                dogsPerSecond: 1,
+                icon: '🐱'
+            },
+            {
+                id: 'fish',
+                name: '🐟 Fish Dispenser',
+                description: 'Gives you 5 dogs per second',
+                cost: 100,
+                owned: 0,
+                dogsPerSecond: 5,
+                icon: '🐟'
+            },
+            {
+                id: 'bone',
+                name: '🦴 Bone Factory',
+                description: 'Gives you 10 dogs per second',
+                cost: 500,
+                owned: 0,
+                dogsPerSecond: 10,
+                icon: '🦴'
+            },
+            {
+                id: 'park',
+                name: '🌳 Dog Park',
+                description: 'Gives you 25 dogs per second',
+                cost: 1000,
+                owned: 0,
+                dogsPerSecond: 25,
+                icon: '🌳'
+            },
+            {
+                id: 'trainer',
+                name: '👨‍🏫 Dog Trainer',
+                description: 'Gives you 50 dogs per second',
+                cost: 5000,
+                owned: 0,
+                dogsPerSecond: 50,
+                icon: '👨‍🏫'
+            },
+            {
+                id: 'hospital',
+                name: '🏥 Dog Hospital',
+                description: 'Gives you 100 dogs per second',
+                cost: 10000,
+                owned: 0,
+                dogsPerSecond: 100,
+                icon: '🏥'
+            },
+            {
+                id: 'mansion',
+                name: '🏰 Dog Mansion',
+                description: 'Gives you 200 dogs per second',
+                cost: 50000,
+                owned: 0,
+                dogsPerSecond: 200,
+                icon: '🏰'
+            },
+            {
+                id: 'spaceship',
+                name: '🚀 Space Rocket',
+                description: 'Gives you 500 dogs per second',
+                cost: 100000,
+                owned: 0,
+                dogsPerSecond: 500,
+                icon: '🚀'
+            },
+            {
+                id: 'island',
+                name: '🏝️ Tropical Island',
+                description: 'Gives you 1000 dogs per second',
+                cost: 500000,
+                owned: 0,
+                dogsPerSecond: 1000,
+                icon: '🏝️'
+            },
+            {
+                id: 'planet',
+                name: '🪐 Dog Planet',
+                description: 'Gives you 2500 dogs per second',
+                cost: 1000000,
+                owned: 0,
+                dogsPerSecond: 2500,
+                icon: '🪐'
+            },
+            {
+                id: 'galaxy',
+                name: '🌌 Dog Galaxy',
+                description: 'Gives you 5000 dogs per second',
+                cost: 5000000,
+                owned: 0,
+                dogsPerSecond: 5000,
+                icon: '🌌'
+            },
+            {
+                id: 'universe',
+                name: '🌠 Dog Universe',
+                description: 'Gives you 10000 dogs per second',
+                cost: 10000000,
+                owned: 0,
+                dogsPerSecond: 10000,
+                icon: '🌠'
+            },
+            {
+                id: 'dimension',
+                name: '⚡ Alternate Dimension',
+                description: 'Gives you 25000 dogs per second',
+                cost: 50000000,
+                owned: 0,
+                dogsPerSecond: 25000,
+                icon: '⚡'
+            },
+            {
+                id: 'multiverse',
+                name: '🔮 Dog Multiverse',
+                description: 'Gives you 50000 dogs per second',
+                cost: 100000000,
+                owned: 0,
+                dogsPerSecond: 50000,
+                icon: '🔮'
+            },
+            {
+                id: 'infinity',
+                name: '♾️ Infinity Engine',
+                description: 'Gives you 100000 dogs per second',
+                cost: 500000000,
+                owned: 0,
+                dogsPerSecond: 100000,
+                icon: '♾️'
+            },
+            {
+                id: 'godmode',
+                name: '👑 God Mode',
+                description: 'Gives you 250000 dogs per second',
+                cost: 1000000000,
+                owned: 0,
+                dogsPerSecond: 250000,
+                icon: '👑'
+            }
+        ];
+
+        // DOM elements
+        const dogButton = document.getElementById('dogButton');
+        const dogCountDisplay = document.getElementById('dogCount');
+        const dogsPerSecondDisplay = document.getElementById('dogsPerSecond');
+        const totalClicksDisplay = document.getElementById('totalClicks');
+        const catCountDisplay = document.getElementById('catCount');
+        const upgradesContainer = document.getElementById('upgradesContainer');
+        const catOrbit = document.getElementById('catOrbit');
+
+        // Click the dog button
+        dogButton.addEventListener('click', (e) => {
+            dogs += 1;
+            totalClicks += 1;
+            updateDisplay();
+            showPlusOne(e.clientX, e.clientY);
+        });
+
+        // Show "+1 Dog" floating text
+        function showPlusOne(x, y) {
+            const plusOne = document.createElement('div');
+            plusOne.classList.add('plus-one');
+            plusOne.textContent = '+1 🐕';
+            plusOne.style.left = x + 'px';
+            plusOne.style.top = y + 'px';
+            document.body.appendChild(plusOne);
+
+            setTimeout(() => {
+                plusOne.remove();
+            }, 1000);
+        }
+
+        // Update display and cats orbiting
+        function updateDisplay() {
+            dogCountDisplay.textContent = Math.floor(dogs);
+            dogsPerSecondDisplay.textContent = Math.floor(dogsPerSecond);
+            totalClicksDisplay.textContent = totalClicks;
+            catCountDisplay.textContent = upgrades[0].owned;
+            updateCatOrbit();
+        }
+
+        // Update orbiting cats
+        function updateCatOrbit() {
+            const catCount = upgrades[0].owned;
+            catOrbit.innerHTML = '';
+
+            for (let i = 0; i < catCount; i++) {
+                const cat = document.createElement('div');
+                cat.classList.add('cat');
+                cat.textContent = '🐱';
+               
+                // Position each cat around the circle
+                const angle = (360 / catCount) * i;
+                const radius = 80;
+                const x = Math.cos((angle * Math.PI) / 180) * radius;
+                const y = Math.sin((angle * Math.PI) / 180) * radius;
+               
+                cat.style.left = `calc(50% + ${x}px - 20px)`;
+                cat.style.top = `calc(50% + ${y}px - 20px)`;
+               
+                catOrbit.appendChild(cat);
+            }
+        }
+
+        // Buy upgrade
+        window.buyUpgrade = function(upgradeId) {
+            const upgrade = upgrades.find(u => u.id === upgradeId);
+           
+            if (dogs >= upgrade.cost) {
+                dogs -= upgrade.cost;
+                upgrade.owned += 1;
+                dogsPerSecond += upgrade.dogsPerSecond;
+                updateDisplay();
+                renderUpgrades();
+            }
+        };
+
+        // Render upgrades with debouncing
+        function renderUpgrades() {
+            const now = Date.now();
+            if (now - lastRenderTime < 100) return; // Only render every 100ms
+            lastRenderTime = now;
+
+            upgradesContainer.innerHTML = '';
+           
+            upgrades.forEach(upgrade => {
+                const canAfford = Math.floor(dogs) >= upgrade.cost;
+                const upgradeDiv = document.createElement('div');
+                upgradeDiv.classList.add('upgrade-item');
+                if (!canAfford) upgradeDiv.classList.add('locked');
+
+                upgradeDiv.innerHTML = `
+                    <div class="upgrade-name">${upgrade.icon} ${upgrade.name}</div>
+                    <div class="upgrade-description">${upgrade.description}</div>
+                    <div class="upgrade-cost">Cost: ${upgrade.cost} dogs</div>
+                    <button class="upgrade-button" ${!canAfford ? 'disabled' : ''} onclick="buyUpgrade('${upgrade.id}')">
+                        Buy
+                    </button>
+                    ${upgrade.owned > 0 ? `<div class="owned">Owned: ${upgrade.owned}</div>` : ''}
+                `;
+
+                upgradesContainer.appendChild(upgradeDiv);
+            });
+        }
+
+        // Passive income (dogs per second)
+        setInterval(() => {
+            if (dogsPerSecond > 0) {
+                dogs += dogsPerSecond / 10;
+                updateDisplay();
+            }
+        }, 100);
+
+        // Update upgrade buttons less frequently to avoid strobing
+        setInterval(() => {
+            renderUpgrades();
+        }, 500);
+
+        // Initial render
+        updateDisplay();
+        renderUpgrades();
+    </script>
+</body>
+</html>
