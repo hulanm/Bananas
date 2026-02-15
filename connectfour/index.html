@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect 4</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #gameContainer {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 48px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .player-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+
+        .red { background: #FF4444; }
+        .yellow { background: #FFD700; }
+
+        .active-player {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        button {
+            padding: 12px 30px;
+            margin: 5px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button.secondary {
+            background: #95a5a6;
+        }
+
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        #modeScreen, #gameOverScreen {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            min-width: 400px;
+        }
+
+        #modeScreen {
+            display: block;
+        }
+
+        #modeScreen h2, #gameOverScreen h2 {
+            font-size: 42px;
+            margin-bottom: 30px;
+            color: #667eea;
+        }
+
+        .mode-button {
+            display: block;
+            width: 100%;
+            padding: 20px;
+            margin: 15px 0;
+            font-size: 24px;
+            border-radius: 10px;
+        }
+
+        .winner-message {
+            font-size: 36px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .winner-red { color: #FF4444; }
+        .winner-yellow { color: #FFD700; }
+        .winner-draw { color: #95a5a6; }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        #currentTurn {
+            text-align: center;
+            font-size: 24px;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+
+        .difficulty-selector label {
+            font-size: 18px;
+            margin-right: 10px;
+        }
+
+        .difficulty-selector select {
+            font-size: 16px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            border: 2px solid #667eea;
+            background: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>🔴 CONNECT 4 🟡</h1>
+        
+        <div id="ui">
+            <div class="player-info">
+                <div class="player-circle red" id="redCircle"></div>
+                <span id="redName">Player 1</span>
+                <span id="redScore">0</span>
+            </div>
+            <div class="player-info">
+                <div class="player-circle yellow" id="yellowCircle"></div>
+                <span id="yellowName">Player 2</span>
+                <span id="yellowScore">0</span>
+            </div>
+        </div>
+
+        <div id="currentTurn">Red's Turn</div>
+        
+        <canvas id="gameCanvas" width="700" height="600"></canvas>
+        
+        <div id="controls">
+            <button id="newGameBtn">New Game</button>
+            <button id="changeModeBtn" class="secondary">Change Mode</button>
+        </div>
+    </div>
+
+    <div id="modeScreen">
+        <h2>Choose Game Mode</h2>
+        <button class="mode-button" id="vsHumanBtn">👥 Player vs Player</button>
+        <button class="mode-button" id="vsAIBtn">🤖 Player vs AI</button>
+        
+        <div class="difficulty-selector" id="difficultySelector" style="display: none;">
+            <label>AI Difficulty:</label>
+            <select id="difficultySelect">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="gameOverScreen">
+        <h2>Game Over!</h2>
+        <div class="winner-message" id="winnerMessage"></div>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="finalRedScore">0</div>
+                <div class="stat-label">Red Wins</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="finalYellowScore">0</div>
+                <div class="stat-label">Yellow Wins</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="drawCount">0</div>
+                <div class="stat-label">Draws</div>
+            </div>
+        </div>
+        <button id="playAgainBtn" class="mode-button">Play Again</button>
+        <button id="backToMenuBtn" class="secondary">Back to Menu</button>
+    </div>
+
+    <script>
+        // ==================== GAME SETUP ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const ROWS = 6;
+        const COLS = 7;
+        const CELL_SIZE = 100;
+        const PADDING = 10;
+        const PIECE_RADIUS = 40;
+
+        // Game state
+        let gameState = {
+            board: [],
+            currentPlayer: 1, // 1 = Red, 2 = Yellow
+            gameMode: null, // 'human' or 'ai'
+            aiDifficulty: 'medium',
+            gameOver: false,
+            winner: null,
+            scores: { red: 0, yellow: 0, draws: 0 },
+            animatingPiece: null,
+            hoveredCol: null
+        };
+
+        // Initialize empty board
+        function initBoard() {
+            gameState.board = [];
+            for (let r = 0; r < ROWS; r++) {
+                gameState.board[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    gameState.board[r][c] = 0;
+                }
+            }
+        }
+
+        // ==================== DRAWING FUNCTIONS ====================
+        function drawBoard() {
+            // Background
+            ctx.fillStyle = '#0066CC';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid and pieces
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const x = c * CELL_SIZE + CELL_SIZE / 2;
+                    const y = r * CELL_SIZE + CELL_SIZE / 2;
+
+                    // Draw piece if exists
+                    if (gameState.board[r][c] !== 0) {
+                        drawPiece(x, y, gameState.board[r][c]);
+                    }
+
+                    // Draw hole
+                    ctx.beginPath();
+                    ctx.arc(x, y, PIECE_RADIUS, 0, Math.PI * 2);
+                    ctx.fillStyle = gameState.board[r][c] === 0 ? '#FFFFFF' : 'rgba(255,255,255,0.2)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#004999';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+
+            // Draw hover preview
+            if (gameState.hoveredCol !== null && !gameState.gameOver && !gameState.animatingPiece) {
+                const x = gameState.hoveredCol * CELL_SIZE + CELL_SIZE / 2;
+                const y = -50;
+                ctx.globalAlpha = 0.5;
+                drawPiece(x, y, gameState.currentPlayer);
+                ctx.globalAlpha = 1;
+            }
+
+            // Draw animating piece
+            if (gameState.animatingPiece) {
+                drawPiece(
+                    gameState.animatingPiece.x,
+                    gameState.animatingPiece.y,
+                    gameState.animatingPiece.player
+                );
+            }
+
+            // Draw winning line
+            if (gameState.winner && gameState.winningCells) {
+                drawWinningLine();
+            }
+        }
+
+        function drawPiece(x, y, player) {
+            ctx.beginPath();
+            ctx.arc(x, y, PIECE_RADIUS - 5, 0, Math.PI * 2);
+            
+            // Gradient
+            const gradient = ctx.createRadialGradient(x - 15, y - 15, 5, x, y, PIECE_RADIUS);
+            if (player === 1) {
+                gradient.addColorStop(0, '#FF6666');
+                gradient.addColorStop(1, '#CC0000');
+            } else {
+                gradient.addColorStop(0, '#FFEE66');
+                gradient.addColorStop(1, '#CCAA00');
+            }
+            
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.strokeStyle = player === 1 ? '#990000' : '#997700';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Shine effect
+            ctx.beginPath();
+            ctx.arc(x - 10, y - 10, 12, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fill();
+        }
+
+        function drawWinningLine() {
+            const cells = gameState.winningCells;
+            const startX = cells[0].col * CELL_SIZE + CELL_SIZE / 2;
+            const startY = cells[0].row * CELL_SIZE + CELL_SIZE / 2;
+            const endX = cells[3].col * CELL_SIZE + CELL_SIZE / 2;
+            const endY = cells[3].row * CELL_SIZE + CELL_SIZE / 2;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = '#00FF00';
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Glow effect
+            ctx.shadowColor = '#00FF00';
+            ctx.shadowBlur = 20;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // ==================== GAME LOGIC ====================
+        function dropPiece(col) {
+            if (gameState.gameOver || gameState.animatingPiece) return false;
+
+            // Find the lowest empty row in this column
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (gameState.board[row][col] === 0) {
+                    // Animate the piece dropping
+                    animateDrop(col, row, gameState.currentPlayer);
+                    return true;
+                }
+            }
+            return false; // Column is full
+        }
+
+        function animateDrop(col, row, player) {
+            const targetY = row * CELL_SIZE + CELL_SIZE / 2;
+            const startX = col * CELL_SIZE + CELL_SIZE / 2;
+            
+            gameState.animatingPiece = {
+                x: startX,
+                y: -50,
+                targetY: targetY,
+                col: col,
+                row: row,
+                player: player,
+                velocity: 0
+            };
+        }
+
+        function updateAnimation() {
+            if (!gameState.animatingPiece) return;
+
+            const piece = gameState.animatingPiece;
+            piece.velocity += 1.5; // Gravity
+            piece.y += piece.velocity;
+
+            // Check if reached target
+            if (piece.y >= piece.targetY) {
+                piece.y = piece.targetY;
+                gameState.board[piece.row][piece.col] = piece.player;
+                gameState.animatingPiece = null;
+
+                // Check for win
+                if (checkWin(piece.row, piece.col)) {
+                    gameState.gameOver = true;
+                    gameState.winner = piece.player;
+                    gameState.scores[piece.player === 1 ? 'red' : 'yellow']++;
+                    setTimeout(() => showGameOver(), 1000);
+                } else if (isBoardFull()) {
+                    gameState.gameOver = true;
+                    gameState.winner = 'draw';
+                    gameState.scores.draws++;
+                    setTimeout(() => showGameOver(), 1000);
+                } else {
+                    // Switch player
+                    gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+                    updateUI();
+
+                    // AI turn
+                    if (gameState.gameMode === 'ai' && gameState.currentPlayer === 2 && !gameState.gameOver) {
+                        setTimeout(makeAIMove, 500);
+                    }
+                }
+            }
+        }
+
+        function checkWin(row, col) {
+            const player = gameState.board[row][col];
+            
+            // Check horizontal
+            if (checkDirection(row, col, 0, 1, player) || 
+                checkDirection(row, col, 0, -1, player)) return true;
+            
+            // Check vertical
+            if (checkDirection(row, col, 1, 0, player) || 
+                checkDirection(row, col, -1, 0, player)) return true;
+            
+            // Check diagonal /
+            if (checkDirection(row, col, -1, 1, player) || 
+                checkDirection(row, col, 1, -1, player)) return true;
+            
+            // Check diagonal \
+            if (checkDirection(row, col, 1, 1, player) || 
+                checkDirection(row, col, -1, -1, player)) return true;
+
+            return false;
+        }
+
+        function checkDirection(row, col, dRow, dCol, player) {
+            let count = 1;
+            let cells = [{row, col}];
+
+            // Check forward
+            let r = row + dRow;
+            let c = col + dCol;
+            while (r >= 0 && r < ROWS && c >= 0 && c < COLS && gameState.board[r][c] === player) {
+                count++;
+                cells.push({row: r, col: c});
+                r += dRow;
+                c += dCol;
+            }
+
+            // Check backward
+            r = row - dRow;
+            c = col - dCol;
+            while (r >= 0 && r < ROWS && c >= 0 && c < COLS && gameState.board[r][c] === player) {
+                count++;
+                cells.unshift({row: r, col: c});
+                r -= dRow;
+                c -= dCol;
+            }
+
+            if (count >= 4) {
+                gameState.winningCells = cells.slice(0, 4);
+                return true;
+            }
+            return false;
+        }
+
+        function isBoardFull() {
+            for (let c = 0; c < COLS; c++) {
+                if (gameState.board[0][c] === 0) return false;
+            }
+            return true;
+        }
+
+        // ==================== AI LOGIC ====================
+        function makeAIMove() {
+            let col;
+            
+            if (gameState.aiDifficulty === 'easy') {
+                col = makeRandomMove();
+            } else if (gameState.aiDifficulty === 'medium') {
+                col = makeMediumMove();
+            } else {
+                col = makeHardMove();
+            }
+
+            if (col !== -1) {
+                dropPiece(col);
+            }
+        }
+
+        function makeRandomMove() {
+            const validCols = [];
+            for (let c = 0; c < COLS; c++) {
+                if (gameState.board[0][c] === 0) {
+                    validCols.push(c);
+                }
+            }
+            return validCols.length > 0 ? validCols[Math.floor(Math.random() * validCols.length)] : -1;
+        }
+
+        function makeMediumMove() {
+            // Try to win
+            for (let c = 0; c < COLS; c++) {
+                if (canWin(c, 2)) return c;
+            }
+
+            // Block opponent
+            for (let c = 0; c < COLS; c++) {
+                if (canWin(c, 1)) return c;
+            }
+
+            // Random move
+            return makeRandomMove();
+        }
+
+        function makeHardMove() {
+            // Try to win
+            for (let c = 0; c < COLS; c++) {
+                if (canWin(c, 2)) return c;
+            }
+
+            // Block opponent
+            for (let c = 0; c < COLS; c++) {
+                if (canWin(c, 1)) return c;
+            }
+
+            // Prefer center columns
+            const centerCols = [3, 2, 4, 1, 5, 0, 6];
+            for (let c of centerCols) {
+                if (gameState.board[0][c] === 0) {
+                    return c;
+                }
+            }
+
+            return makeRandomMove();
+        }
+
+        function canWin(col, player) {
+            // Check if dropping a piece in this column would result in a win
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (gameState.board[row][col] === 0) {
+                    gameState.board[row][col] = player;
+                    const won = checkWin(row, col);
+                    gameState.board[row][col] = 0;
+                    return won;
+                }
+            }
+            return false;
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        function updateUI() {
+            const turnText = gameState.currentPlayer === 1 ? "Red's Turn" : 
+                            (gameState.gameMode === 'ai' && gameState.currentPlayer === 2 ? "AI's Turn" : "Yellow's Turn");
+            document.getElementById('currentTurn').textContent = turnText;
+            document.getElementById('currentTurn').style.color = gameState.currentPlayer === 1 ? '#FF4444' : '#FFD700';
+
+            // Update active player indicators
+            document.getElementById('redCircle').classList.toggle('active-player', gameState.currentPlayer === 1);
+            document.getElementById('yellowCircle').classList.toggle('active-player', gameState.currentPlayer === 2);
+
+            // Update scores
+            document.getElementById('redScore').textContent = gameState.scores.red;
+            document.getElementById('yellowScore').textContent = gameState.scores.yellow;
+
+            // Update names
+            if (gameState.gameMode === 'ai') {
+                document.getElementById('redName').textContent = 'Player';
+                document.getElementById('yellowName').textContent = 'AI';
+            } else {
+                document.getElementById('redName').textContent = 'Player 1';
+                document.getElementById('yellowName').textContent = 'Player 2';
+            }
+        }
+
+        function showGameOver() {
+            let message = '';
+            let messageClass = '';
+
+            if (gameState.winner === 1) {
+                message = gameState.gameMode === 'ai' ? '🎉 You Win!' : '🔴 Red Wins!';
+                messageClass = 'winner-red';
+            } else if (gameState.winner === 2) {
+                message = gameState.gameMode === 'ai' ? '🤖 AI Wins!' : '🟡 Yellow Wins!';
+                messageClass = 'winner-yellow';
+            } else {
+                message = '🤝 It\'s a Draw!';
+                messageClass = 'winner-draw';
+            }
+
+            document.getElementById('winnerMessage').textContent = message;
+            document.getElementById('winnerMessage').className = 'winner-message ' + messageClass;
+            
+            document.getElementById('finalRedScore').textContent = gameState.scores.red;
+            document.getElementById('finalYellowScore').textContent = gameState.scores.yellow;
+            document.getElementById('drawCount').textContent = gameState.scores.draws;
+            
+            document.getElementById('gameOverScreen').style.display = 'block';
+        }
+
+        function newGame() {
+            initBoard();
+            gameState.currentPlayer = 1;
+            gameState.gameOver = false;
+            gameState.winner = null;
+            gameState.animatingPiece = null;
+            gameState.winningCells = null;
+            gameState.hoveredCol = null;
+            updateUI();
+        }
+
+        // ==================== INPUT HANDLING ====================
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState.gameOver || gameState.animatingPiece) return;
+            if (gameState.gameMode === 'ai' && gameState.currentPlayer === 2) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const col = Math.floor(x / CELL_SIZE);
+            
+            if (col >= 0 && col < COLS) {
+                gameState.hoveredCol = col;
+            } else {
+                gameState.hoveredCol = null;
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            gameState.hoveredCol = null;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (gameState.gameOver || gameState.animatingPiece) return;
+            if (gameState.gameMode === 'ai' && gameState.currentPlayer === 2) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const col = Math.floor(x / CELL_SIZE);
+            
+            if (col >= 0 && col < COLS) {
+                dropPiece(col);
+            }
+        });
+
+        // Button handlers
+        document.getElementById('vsHumanBtn').addEventListener('click', () => {
+            gameState.gameMode = 'human';
+            document.getElementById('modeScreen').style.display = 'none';
+            newGame();
+        });
+
+        document.getElementById('vsAIBtn').addEventListener('click', () => {
+            document.getElementById('difficultySelector').style.display = 'block';
+        });
+
+        document.getElementById('difficultySelect').addEventListener('change', (e) => {
+            gameState.aiDifficulty = e.target.value;
+            gameState.gameMode = 'ai';
+            document.getElementById('modeScreen').style.display = 'none';
+            newGame();
+        });
+
+        document.getElementById('newGameBtn').addEventListener('click', newGame);
+
+        document.getElementById('changeModeBtn').addEventListener('click', () => {
+            document.getElementById('modeScreen').style.display = 'block';
+            document.getElementById('difficultySelector').style.display = 'none';
+            gameState.scores = { red: 0, yellow: 0, draws: 0 };
+        });
+
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            newGame();
+        });
+
+        document.getElementById('backToMenuBtn').addEventListener('click', () => {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('modeScreen').style.display = 'block';
+            document.getElementById('difficultySelector').style.display = 'none';
+            gameState.scores = { red: 0, yellow: 0, draws: 0 };
+        });
+
+        // ==================== GAME LOOP ====================
+        function gameLoop() {
+            updateAnimation();
+            drawBoard();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==================== START GAME ====================
+        initBoard();
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>
